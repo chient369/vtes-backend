@@ -1,6 +1,7 @@
 package com.vtes.service;
 
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -43,6 +44,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 	private static final String MOVE = "move";
 	private static final Integer RESULT_LIMIT = 100;
 	private static final String PREFIX_KEY = "stations:";
+	private static final Integer KEY_DURATION = 7;
 
 	@Autowired
 	private TotalNaviApiConnect totalnavi;
@@ -99,7 +101,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		params.put("limit", RESULT_LIMIT);
 		
 		String jsonString = transport.getStationDetail(params).getBody();
-		redisTemplate.opsForValue().set(PREFIX_KEY + stationName, jsonString);
+		redisTemplate.opsForValue().set(PREFIX_KEY + stationName, jsonString,Duration.ofDays(KEY_DURATION));
 		log.info("Restore station detail with key : {}",PREFIX_KEY + stationName);
 		
 		return jsonString;
