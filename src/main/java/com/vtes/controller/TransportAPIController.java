@@ -52,7 +52,7 @@ public class TransportAPIController {
 	@GetMapping(value = "/routes")
 	public ResponseEntity<?> getRouteDetails(@RequestParam(name = "start", required = true) String start,
 			@RequestParam(name = "goal", required = true) String goal,
-			@RequestParam(name = "via", required = false) String[] via,
+			@RequestParam(name = "viaCode", required = false) String[] via,
 			@RequestParam(name = "commuterPass", required = false) boolean cpActive)
 			throws ParameterInvalidException, CommuterPassNotFound {
 

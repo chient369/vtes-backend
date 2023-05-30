@@ -9,10 +9,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -45,6 +47,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 	private static final Integer RESULT_LIMIT = 100;
 	private static final String PREFIX_KEY = "stations:";
 	private static final Integer KEY_DURATION = 7;
+	private static final String FLIGHT = "domestic_flight";
 
 	@Autowired
 	private TotalNaviApiConnect totalnavi;
@@ -63,7 +66,11 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
 		String formattedDateTime = sdf.format(new Date());
 
+		// Put default requied field to call api
 		params.put("start_time", formattedDateTime);
+
+		// Filter routes use flight way
+		params.put("unuse", FLIGHT);
 
 		ResponseEntity<String> json = totalnavi.searchRoutes(params);
 		String jsonString = json.getBody();
@@ -84,49 +91,58 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 	// Call the api to a 3rd party and filter out the points that are train stations
 	@Override
 	public List<Station> searchStationsByWord(String stationName) {
-		String jsonString = (String) redisTemplate.opsForValue().get(PREFIX_KEY + stationName);
-		
-		log.info("Get station data from Redis with key : {}",PREFIX_KEY + stationName);
 
-		if (jsonString == null) {
+		String jsonString = (String) redisTemplate.opsForValue().get(PREFIX_KEY + stationName);
+
+		if (isNullObject(jsonString)) {
 			jsonString = searchStationsFromNaviTime(stationName);
+		}else {
+			log.info("Get station data from Redis with key : {}", PREFIX_KEY + stationName);
 		}
 		return filterStations(jsonString);
 
 	}
 
 	private String searchStationsFromNaviTime(String stationName) {
+		if (!keyRegexValidate(stationName)) {
+			return null;
+		}
+
 		Map<String, Object> params = new HashMap<>();
 		params.put("word", stationName);
 		params.put("limit", RESULT_LIMIT);
-		
-		String jsonString = transport.getStationDetail(params).getBody();
-		redisTemplate.opsForValue().set(PREFIX_KEY + stationName, jsonString,Duration.ofDays(KEY_DURATION));
-		log.info("Restore station detail with key : {}",PREFIX_KEY + stationName);
-		
-		return jsonString;
+
+		ResponseEntity<String> responseEntity = transport.getStationDetail(params);
+		if (responseEntity.getStatusCode() == HttpStatus.OK) {
+			String jsonString = responseEntity.getBody();
+			redisTemplate.opsForValue().set(PREFIX_KEY + stationName, jsonString, Duration.ofDays(KEY_DURATION));
+			log.info("Stored station detail with key: {}", PREFIX_KEY + stationName);
+			return jsonString;
+		}
+
+		return null;
 	}
 
 	private List<Station> filterStations(String jsonString) {
-		List<Station> responseData = null;
+		if (isNullObject(jsonString)) {
+			return null;
+		}
+		;
 		try {
-			ObjectMapper objectMapper = new ObjectMapper();
 			JsonNode node = objectMapper.readTree(jsonString);
 			JsonNode itemsNode = node.get(ITEMS);
-			responseData = objectMapper.readValue(itemsNode.toString(), new TypeReference<List<Station>>() {
+			List<Station> stations = objectMapper.readValue(itemsNode.toString(), new TypeReference<List<Station>>() {
 			});
+
+			return stations.stream().filter(s -> s.getTypes()
+					.contains(STATION))
+					.peek(s -> s.setName(s.getName() + STATION_JA))
+					.collect(Collectors.toList());
 		} catch (JsonProcessingException e) {
-			log.debug("Error occur on mapper to List<Station>");
+			log.debug("Error occurred while mapping to List<Station>");
 		}
 
-		List<Station> stations = new ArrayList<>();
-		if (responseData != null) {
-			stations = responseData.stream()
-					.peek(s -> s.setName(s.getName() + STATION_JA))
-					.filter(s -> s.getTypes().contains(STATION))
-					.collect(Collectors.toList());
-		}
-		return stations;
+		return new ArrayList<>();
 	}
 
 	public List<CommuterPassRoute> searchCommuterPassDetail(Map<String, Object> params) {
@@ -153,6 +169,19 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		}).collect(Collectors.toList());
 
 		return cpDetails;
+	}
+
+	private boolean keyRegexValidate(String keyWord) {
+		String hiraganaRegex = "^[ぁ-ん]{4,}$";
+		String katakanaRegex = "^[ァ-ン]{4,}$";
+		String kanjiRegex = "^[一-龯]{2,}$";
+
+		return Pattern.matches(hiraganaRegex, keyWord) || Pattern.matches(katakanaRegex, keyWord)
+				|| Pattern.matches(kanjiRegex, keyWord);
+	}
+
+	private boolean isNullObject(Object ob) {
+		return ob == null ? true : false;
 	}
 
 }
