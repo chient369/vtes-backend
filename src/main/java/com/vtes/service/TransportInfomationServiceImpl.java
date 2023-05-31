@@ -71,7 +71,6 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 		// Filter routes use flight way
 		params.put("unuse", FLIGHT);
-
 		ResponseEntity<?> response = totalnavi.searchRoutes(params);
 		if(response.getStatusCodeValue() == 500) {
 			return new ArrayList<>();
@@ -99,6 +98,8 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 		if (isNullObject(jsonString)) {
 			jsonString = searchStationsFromNaviTime(stationName);
+		}else {
+			log.info("Get station data from Redis with key : {}", PREFIX_KEY + stationName);
 		}
 		return filterStations(jsonString);
 
@@ -116,8 +117,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		ResponseEntity<String> responseEntity = transport.getStationDetail(params);
 		if (responseEntity.getStatusCode() == HttpStatus.OK) {
 			String jsonString = responseEntity.getBody();
-			redisTemplate.opsForValue().set(PREFIX_KEY + stationName, jsonString, Duration.ofDays(KEY_DURATION));
-			log.info("Stored station detail with key: {}", PREFIX_KEY + stationName);
+			restoreDataToRedis(stationName, jsonString);
 			return jsonString;
 		}
 
@@ -183,14 +183,19 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 	}
 
 	private boolean keyRegexValidate(String keyWord) {
-		String hiraganaRegex = "^[ぁ-ん]{4,}$";
-		String katakanaRegex = "^[ァ-ン]{4,}$";
-		String kanjiRegex = "^[一-龯]{2,}$";
+		String hiraganaRegex = "^[ぁ-ん]{4}$";
+		String katakanaRegex = "^[ァ-ン]{4}$";
+		String kanjiRegex = "^[一-龯]{2}$";
 
 		return Pattern.matches(hiraganaRegex, keyWord) || Pattern.matches(katakanaRegex, keyWord)
 				|| Pattern.matches(kanjiRegex, keyWord);
 	}
 
+	private void restoreDataToRedis(String key,String data) {
+		redisTemplate.opsForValue().set(PREFIX_KEY + key, data, Duration.ofDays(KEY_DURATION));
+		log.info("Stored station detail with key: {}", PREFIX_KEY + key);
+	}
+	
 	private boolean isNullObject(Object ob) {
 		return ob == null ? true : false;
 	}
