@@ -21,8 +21,8 @@ import com.vtes.payload.response.ResponseData.ResponseType;
 import com.vtes.repository.CommuterPassRepo;
 import com.vtes.repository.DepartmentRepository;
 import com.vtes.repository.UserRepository;
-import com.vtes.sercurity.jwt.JwtUtils;
-import com.vtes.sercurity.services.UserDetailsImpl;
+import com.vtes.security.jwt.JwtUtils;
+import com.vtes.security.services.UserDetailsImpl;
 
 import lombok.extern.slf4j.Slf4j;
 

@@ -26,7 +26,7 @@ import com.vtes.payload.response.ResponseData.ResponseType;
 import com.vtes.payload.response.UserResponse;
 import com.vtes.repository.DepartmentRepository;
 import com.vtes.repository.UserRepository;
-import com.vtes.sercurity.services.UserDetailsImpl;
+import com.vtes.security.services.UserDetailsImpl;
 import com.vtes.service.EmailService;
 import com.vtes.service.UserService;
 

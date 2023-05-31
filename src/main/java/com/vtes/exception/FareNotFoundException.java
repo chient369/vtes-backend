@@ -9,7 +9,7 @@ public class FareNotFoundException extends Exception {
 	private String message;
 
 	public FareNotFoundException(String msg) {
-		super();
+		super(msg);
 		this.message = msg;
 	}
 

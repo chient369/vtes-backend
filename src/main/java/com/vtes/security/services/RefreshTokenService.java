@@ -1,4 +1,4 @@
-package com.vtes.sercurity.services;
+package com.vtes.security.services;
 
 import java.time.Instant;
 import java.util.Optional;

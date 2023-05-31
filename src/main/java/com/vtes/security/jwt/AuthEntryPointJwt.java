@@ -1,4 +1,4 @@
-package com.vtes.sercurity.jwt;
+package com.vtes.security.jwt;
 
 import java.io.IOException;
 

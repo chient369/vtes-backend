@@ -56,10 +56,10 @@ public class FileDataService {
 				file.getInputStream());
 		
 		if(putObjectResult != null){
-			log.info("{} uploaded file.",userId);
+			log.info("User {} has uploaded file.",userId);
 			fareService.deleteByUserId(userId);
 			
-			log.info("{} fare detail deleted.",userId);
+			log.info("User {} of fare detail deleted.",userId);
 			// Saving metadata to db
 			fileDataRepo.save((new FileData(new User(userId), fileName, fileNameOnS3, new Date())));
 		
@@ -85,7 +85,7 @@ public class FileDataService {
 			content = IOUtils.toByteArray(stream);
 			s3Object.close();
 		} catch (final IOException ex) {
-			log.debug("{} download file failed",userId);
+			log.debug("User {} download file failed",userId);
 			log.debug("IO Error Message= " + ex.getMessage());
 		}
 		log.info("User {} is downloaded file {} successfully.", userId,id);

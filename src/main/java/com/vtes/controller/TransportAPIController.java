@@ -28,7 +28,7 @@ import com.vtes.model.navitime.Station;
 import com.vtes.payload.response.ResponseData;
 import com.vtes.payload.response.ResponseData.ResponseType;
 import com.vtes.repository.CommuterPassRepo;
-import com.vtes.sercurity.services.UserDetailsImpl;
+import com.vtes.security.services.UserDetailsImpl;
 import com.vtes.service.TransportInfomationServiceImpl;
 
 import lombok.extern.slf4j.Slf4j;

@@ -6,7 +6,7 @@ public class ParameterInvalidException extends Exception {
 	private String msg;
 
 	public ParameterInvalidException(String msg) {
-		super();
+		super(msg);
 		this.msg = msg;
 	}
 

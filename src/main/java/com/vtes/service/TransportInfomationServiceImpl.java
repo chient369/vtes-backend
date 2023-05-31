@@ -72,10 +72,10 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		// Filter routes use flight way
 		params.put("unuse", FLIGHT);
 		ResponseEntity<?> response = totalnavi.searchRoutes(params);
-		if(response.getStatusCodeValue() == 500) {
+		if (response.getStatusCodeValue() == 500) {
 			return new ArrayList<>();
 		}
-		String jsonString = (String)response.getBody();
+		String jsonString = (String) response.getBody();
 
 		try {
 			JsonNode node = objectMapper.readTree(jsonString);
@@ -98,15 +98,13 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 		if (isNullObject(jsonString)) {
 			jsonString = searchStationsFromNaviTime(stationName);
-		}else {
-			log.info("Get station data from Redis with key : {}", PREFIX_KEY + stationName);
 		}
 		return filterStations(jsonString);
 
 	}
 
 	private String searchStationsFromNaviTime(String stationName) {
-		if (!keyRegexValidate(stationName)) {
+		if (!keyRegexValidateToCallApi(stationName)) {
 			return null;
 		}
 
@@ -117,7 +115,10 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		ResponseEntity<String> responseEntity = transport.getStationDetail(params);
 		if (responseEntity.getStatusCode() == HttpStatus.OK) {
 			String jsonString = responseEntity.getBody();
-			restoreDataToRedis(stationName, jsonString);
+
+			if (keyRegexValidateToRestore(stationName)) {
+				restoreDataToRedis(stationName, jsonString);
+			}
 			return jsonString;
 		}
 
@@ -135,10 +136,8 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 			List<Station> stations = objectMapper.readValue(itemsNode.toString(), new TypeReference<List<Station>>() {
 			});
 
-			return stations.stream().filter(s -> s.getTypes()
-					.contains(STATION))
-					.peek(s -> s.setName(s.getName() + STATION_JA))
-					.collect(Collectors.toList());
+			return stations.stream().filter(s -> s.getTypes().contains(STATION))
+					.peek(s -> s.setName(s.getName() + STATION_JA)).collect(Collectors.toList());
 		} catch (JsonProcessingException e) {
 			log.debug("Error occurred while mapping to List<Station>");
 		}
@@ -146,43 +145,52 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		return new ArrayList<>();
 	}
 
-	public List<CommuterPassRoute> searchCommuterPassDetail(Map<String, Object> params) throws NotFoundCommuterPassValid {
+	public List<CommuterPassRoute> searchCommuterPassDetail(Map<String, Object> params)
+			throws NotFoundCommuterPassValid {
 		List<Route> routes = searchRoutes(params);
 		return convertCommuterPass(routes);
 
 	}
 
 	// Get route details and convert to a commuter pass used for next request
-	private List<CommuterPassRoute> convertCommuterPass(List<Route> routes) throws NotFoundCommuterPassValid{
+	private List<CommuterPassRoute> convertCommuterPass(List<Route> routes) throws NotFoundCommuterPassValid {
 		List<CommuterPassRoute> cpDetails = new ArrayList<>();
 		for (Route route : routes) {
-		    CommuterPassRoute cpRoute = new CommuterPassRoute();
-		    cpRoute.setSummary(route.getSummary());
-		    cpRoute.setSections(route.getSections());
+			CommuterPassRoute cpRoute = new CommuterPassRoute();
+			cpRoute.setSummary(route.getSummary());
+			cpRoute.setSections(route.getSections());
 
-		    List<String> cpLink = new ArrayList<>();
-		    for (RouteSectionItem section : route.getSections()) {
-		        if (MOVE.equals(section.getType()) && section.getTransport() != null) {
-		            if (section.getTransport().getLinks() != null) {
-		                for (Link link : section.getTransport().getLinks()) {
-		                    cpLink.add(link.generateViaJson());
-		                }
-		            }
-		        }
-		    }
+			List<String> cpLink = new ArrayList<>();
+			for (RouteSectionItem section : route.getSections()) {
+				if (MOVE.equals(section.getType()) && section.getTransport() != null) {
+					if (section.getTransport().getLinks() != null) {
+						for (Link link : section.getTransport().getLinks()) {
+							cpLink.add(link.generateViaJson());
+						}
+					}
+				}
+			}
 
-		    if (cpLink.size() > 10) {
-		        throw new NotFoundCommuterPassValid("Not found valid commuter pass");
-		    }
-		    cpRoute.setCommuterPassLink(cpLink);
+			if (cpLink.size() > 10) {
+				throw new NotFoundCommuterPassValid("Not found valid commuter pass");
+			}
+			cpRoute.setCommuterPassLink(cpLink);
 
-		    cpDetails.add(cpRoute);
+			cpDetails.add(cpRoute);
 		}
 
 		return cpDetails;
 	}
 
-	private boolean keyRegexValidate(String keyWord) {
+	private boolean keyRegexValidateToCallApi(String keyWord) {
+		String hiraganaRegex = "^[ぁ-ん]{4,}$";
+		String katakanaRegex = "^[ァ-ン]{4,}$";
+		String kanjiRegex = "^[一-龯]{2,}$";
+		return Pattern.matches(hiraganaRegex, keyWord) || Pattern.matches(katakanaRegex, keyWord)
+				|| Pattern.matches(kanjiRegex, keyWord);
+	}
+
+	private boolean keyRegexValidateToRestore(String keyWord) {
 		String hiraganaRegex = "^[ぁ-ん]{4}$";
 		String katakanaRegex = "^[ァ-ン]{4}$";
 		String kanjiRegex = "^[一-龯]{2}$";
@@ -191,11 +199,11 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 				|| Pattern.matches(kanjiRegex, keyWord);
 	}
 
-	private void restoreDataToRedis(String key,String data) {
+	private void restoreDataToRedis(String key, String data) {
 		redisTemplate.opsForValue().set(PREFIX_KEY + key, data, Duration.ofDays(KEY_DURATION));
 		log.info("Stored station detail with key: {}", PREFIX_KEY + key);
 	}
-	
+
 	private boolean isNullObject(Object ob) {
 		return ob == null ? true : false;
 	}

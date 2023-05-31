@@ -1,4 +1,4 @@
-package com.vtes.sercurity.services;
+package com.vtes.security.services;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;

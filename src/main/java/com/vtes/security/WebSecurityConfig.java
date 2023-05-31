@@ -1,4 +1,4 @@
-package com.vtes.sercurity;
+package com.vtes.security;
 
 import java.util.Arrays;
 
@@ -23,9 +23,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
-import com.vtes.sercurity.jwt.AuthEntryPointJwt;
-import com.vtes.sercurity.jwt.AuthTokenFilter;
-import com.vtes.sercurity.services.UserDetailsServiceImpl;
+import com.vtes.security.jwt.AuthEntryPointJwt;
+import com.vtes.security.jwt.AuthTokenFilter;
+import com.vtes.security.services.UserDetailsServiceImpl;
 
 @Configuration
 @EnableGlobalMethodSecurity(prePostEnabled = true)

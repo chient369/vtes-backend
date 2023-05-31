@@ -6,7 +6,7 @@ import com.vtes.entity.User;
 import com.vtes.payload.request.PasswordResetEmailRequest;
 import com.vtes.payload.request.PasswordResetRequest;
 import com.vtes.payload.request.UpdateInfoRequest;
-import com.vtes.sercurity.services.UserDetailsImpl;
+import com.vtes.security.services.UserDetailsImpl;
 
 public interface UserService {
 	User getUser(String email);
