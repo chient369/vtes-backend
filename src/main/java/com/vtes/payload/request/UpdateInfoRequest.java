@@ -16,7 +16,7 @@ public class UpdateInfoRequest {
 	@Size(min = 4, max = 64)
 	private String fullName;
 
-	@Size(min = 8, max = 64)
+	@Size(max = 64)
 	private String oldPassword;
 
 	@Size(min = 8, max = 64)
