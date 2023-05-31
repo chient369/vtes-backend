@@ -73,6 +73,7 @@ public class FareDTO {
 				.transportation(transportation)
 				.visitDate(visitDate)
 				.deleteFlag(deleteFlag)
+				.createDate(new Date())
 				.build();
 	}
 

@@ -34,11 +34,11 @@ public class RefreshToken {
 	@Column(name = "TOKEN", nullable = false, unique = true)
 	private String token;
 
-	@Column(name = "EXPIRY_DATE", nullable = false)
+	@Column(name = "EXPIRY_DT", nullable = false)
 	private Instant expiryDate;
 
 	@Column(name = "`CREATE_DT`")
-	private Instant createDt;
+	private Instant createDt = Instant.now();
 
 	@Column(name = "`UPDATE_DT`")
 	private Instant updateDt;
