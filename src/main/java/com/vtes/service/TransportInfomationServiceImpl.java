@@ -3,12 +3,10 @@ package com.vtes.service;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -22,9 +20,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vtes.exception.NotFoundCommuterPassValid;
 import com.vtes.model.navitime.CommuterPassRoute;
 import com.vtes.model.navitime.Link;
 import com.vtes.model.navitime.Route;
+import com.vtes.model.navitime.RouteSectionItem;
 import com.vtes.model.navitime.Station;
 
 import lombok.extern.slf4j.Slf4j;
@@ -72,8 +72,11 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		// Filter routes use flight way
 		params.put("unuse", FLIGHT);
 
-		ResponseEntity<String> json = totalnavi.searchRoutes(params);
-		String jsonString = json.getBody();
+		ResponseEntity<?> response = totalnavi.searchRoutes(params);
+		if(response.getStatusCodeValue() == 500) {
+			return new ArrayList<>();
+		}
+		String jsonString = (String)response.getBody();
 
 		try {
 			JsonNode node = objectMapper.readTree(jsonString);
@@ -96,8 +99,6 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 		if (isNullObject(jsonString)) {
 			jsonString = searchStationsFromNaviTime(stationName);
-		}else {
-			log.info("Get station data from Redis with key : {}", PREFIX_KEY + stationName);
 		}
 		return filterStations(jsonString);
 
@@ -125,7 +126,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 	private List<Station> filterStations(String jsonString) {
 		if (isNullObject(jsonString)) {
-			return null;
+			return new ArrayList<>();
 		}
 		;
 		try {
@@ -145,28 +146,38 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		return new ArrayList<>();
 	}
 
-	public List<CommuterPassRoute> searchCommuterPassDetail(Map<String, Object> params) {
+	public List<CommuterPassRoute> searchCommuterPassDetail(Map<String, Object> params) throws NotFoundCommuterPassValid {
 		List<Route> routes = searchRoutes(params);
 		return convertCommuterPass(routes);
 
 	}
 
 	// Get route details and convert to a commuter pass used for next request
-	private List<CommuterPassRoute> convertCommuterPass(List<Route> routes) {
-		List<CommuterPassRoute> cpDetails = routes.stream().map(route -> {
-			CommuterPassRoute cpRoute = new CommuterPassRoute();
-			cpRoute.setSummary(route.getSummary());
-			cpRoute.setSections(route.getSections());
+	private List<CommuterPassRoute> convertCommuterPass(List<Route> routes) throws NotFoundCommuterPassValid{
+		List<CommuterPassRoute> cpDetails = new ArrayList<>();
+		for (Route route : routes) {
+		    CommuterPassRoute cpRoute = new CommuterPassRoute();
+		    cpRoute.setSummary(route.getSummary());
+		    cpRoute.setSections(route.getSections());
 
-			List<String> cpLink = route.getSections().stream()
-					.filter(sc -> MOVE.equals(sc.getType()) && sc.getTransport() != null)
-					.flatMap(sc -> Optional.ofNullable(sc.getTransport().getLinks()).orElse(Collections.emptyList())
-							.stream().map(Link::generateViaJson))
-					.collect(Collectors.toList());
-			cpRoute.setCommuterPassLink(cpLink);
+		    List<String> cpLink = new ArrayList<>();
+		    for (RouteSectionItem section : route.getSections()) {
+		        if (MOVE.equals(section.getType()) && section.getTransport() != null) {
+		            if (section.getTransport().getLinks() != null) {
+		                for (Link link : section.getTransport().getLinks()) {
+		                    cpLink.add(link.generateViaJson());
+		                }
+		            }
+		        }
+		    }
 
-			return cpRoute;
-		}).collect(Collectors.toList());
+		    if (cpLink.size() > 10) {
+		        throw new NotFoundCommuterPassValid("Not found valid commuter pass");
+		    }
+		    cpRoute.setCommuterPassLink(cpLink);
+
+		    cpDetails.add(cpRoute);
+		}
 
 		return cpDetails;
 	}

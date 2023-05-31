@@ -19,6 +19,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vtes.entity.CommuterPass;
 import com.vtes.exception.CommuterPassNotFound;
+import com.vtes.exception.NotFoundCommuterPassValid;
 import com.vtes.exception.ParameterInvalidException;
 import com.vtes.model.navitime.CommuterPassRoute;
 import com.vtes.model.navitime.Node;
@@ -97,7 +98,7 @@ public class TransportAPIController {
 
 	@GetMapping("/cp-routes")
 	public ResponseEntity<?> getCommuterPass(@RequestParam(name = "start", required = true) String start,
-			@RequestParam(name = "goal", required = true) String goal) throws ParameterInvalidException {
+			@RequestParam(name = "goal", required = true) String goal) throws ParameterInvalidException, NotFoundCommuterPassValid {
 
 		Map<String, Object> params = new HashMap<>();
 		params.put("start", start);

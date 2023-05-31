@@ -13,8 +13,10 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.vtes.exception.AuthenticationFailedException;
+import com.vtes.exception.BadRequestException;
 import com.vtes.exception.CommuterPassNotFound;
 import com.vtes.exception.FareNotFoundException;
+import com.vtes.exception.NotFoundCommuterPassValid;
 import com.vtes.exception.ParameterInvalidException;
 import com.vtes.exception.TokenRefreshException;
 import com.vtes.exception.UploadFileException;
@@ -30,10 +32,31 @@ public class ApiExceptionController {
 	@ExceptionHandler(Exception.class)
 	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
 	public ResponseData badRequestResponse(Exception ex) {
-		log.error(ex.getMessage());
 		return ResponseData.builder()
 				.code("")
-				.message("Server error! Cause By: " + ex.getMessage())
+				.message("Server error")
+				.type(ResponseType.ERROR)
+				.build();
+
+	}
+	
+	@ExceptionHandler(BadRequestException.class)
+	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
+	public ResponseData badRequest(BadRequestException ex) {
+		return ResponseData.builder()
+				.code("")
+				.message(ex.getMessage())
+				.type(ResponseType.ERROR)
+				.build();
+	}
+	
+
+	@ExceptionHandler(NotFoundCommuterPassValid.class)
+	@ResponseStatus(value = HttpStatus.NOT_FOUND)
+	public ResponseData notFoundCommuterPassValid(Exception ex) {
+		return ResponseData.builder()
+				.code("")
+				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();
 

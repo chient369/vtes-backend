@@ -1,16 +1,21 @@
 package com.vtes.config;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.amazonaws.services.chimesdkmeetings.model.NotFoundException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vtes.exception.AccessKeyExpiredException;
 import com.vtes.exception.BadRequestException;
+import com.vtes.model.navitime.NavitimeExceptionMessage;
 
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import feign.Response;
 import feign.codec.ErrorDecoder;
-import lombok.extern.slf4j.Slf4j;
 
 /*
  * @Author: chien.tranvan
@@ -19,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 
 @Configuration
-@Slf4j
 public class FeignClientConfig {
 
 	private final RapidAPIAccessKeyManager accessKeyManager;
@@ -57,11 +61,9 @@ public class FeignClientConfig {
 	// Error decoder for handling API response errors and rotate access key when
 	// current key expired
 	public static class NavitimeErrorDecoder implements ErrorDecoder {
-
+		private ErrorDecoder errorDecoder = new Default();
 		public final RapidAPIAccessKeyManager accessKeyManager;
 		private static final Integer TOO_MANY_REQUEST = 429;
-		private static final Integer BAD_REQUEST = 400;
-		private static final Integer OK = 200;
 
 		public NavitimeErrorDecoder(RapidAPIAccessKeyManager accessKeyManager) {
 			this.accessKeyManager = accessKeyManager;
@@ -69,21 +71,29 @@ public class FeignClientConfig {
 
 		@Override
 		public Exception decode(String methodKey, Response response) {
+			NavitimeExceptionMessage message = null;
+			try (InputStream bodyIs = response.body()
+		            .asInputStream()) {
+		            ObjectMapper mapper = new ObjectMapper();
+		            message = mapper.readValue(bodyIs, NavitimeExceptionMessage.class);
+		        } catch (IOException e) {
+		            return new Exception(e.getMessage());
+		        }
+			
 			if (response.status() == TOO_MANY_REQUEST) {
 				String currentKey = accessKeyManager.getCurrentAccessKey();
 				accessKeyManager.rotateAccesskey();
 				return new AccessKeyExpiredException(currentKey);
 			}
-
-			if (response.status() == BAD_REQUEST) {
-				return new BadRequestException("Bad Request");
+			if(message.getStatus_code() == 500) {
+				System.err.println(message.getMessage());
+				return new BadRequestException(message.getMessage());
+			}
+			if(message.getStatus_code() == 404) {
+				return new NotFoundException(message.getMessage());
 			}
 
-			if (response.status() != OK) {
-				return new Exception("Error occurred while calling 3rd-party API.");
-			}
-
-			return null;
+			 return errorDecoder.decode(methodKey, response);
 		}
 	}
 }
