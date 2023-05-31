@@ -98,8 +98,6 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 		if (isNullObject(jsonString)) {
 			jsonString = searchStationsFromNaviTime(stationName);
-		} else {
-			log.info("Get station data from Redis with key : {}", PREFIX_KEY + stationName);
 		}
 		return filterStations(jsonString);
 
@@ -117,7 +115,8 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		ResponseEntity<String> responseEntity = transport.getStationDetail(params);
 		if (responseEntity.getStatusCode() == HttpStatus.OK) {
 			String jsonString = responseEntity.getBody();
-			if (!keyRegexValidateToRestore(stationName)) {
+
+			if (keyRegexValidateToRestore(stationName)) {
 				restoreDataToRedis(stationName, jsonString);
 			}
 			return jsonString;
@@ -183,6 +182,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		return cpDetails;
 	}
 
+
 	private boolean keyRegexValidateToCallApi(String keyWord) {
 		String hiraganaRegex = "^[ぁ-ん]{4,}$";
 		String katakanaRegex = "^[ァ-ン]{4,}$";
@@ -205,6 +205,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		redisTemplate.opsForValue().set(PREFIX_KEY + key, data, Duration.ofDays(KEY_DURATION));
 		log.info("Stored station detail with key: {}", PREFIX_KEY + key);
 	}
+
 
 	private boolean isNullObject(Object ob) {
 		return ob == null ? true : false;

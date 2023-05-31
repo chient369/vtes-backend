@@ -31,10 +31,10 @@ import com.vtes.payload.response.ResponseData;
 import com.vtes.payload.response.ResponseData.ResponseType;
 import com.vtes.repository.DepartmentRepository;
 import com.vtes.repository.UserRepository;
-import com.vtes.sercurity.jwt.CookieUtils;
-import com.vtes.sercurity.jwt.JwtUtils;
-import com.vtes.sercurity.services.RefreshTokenService;
-import com.vtes.sercurity.services.UserDetailsImpl;
+import com.vtes.security.jwt.CookieUtils;
+import com.vtes.security.jwt.JwtUtils;
+import com.vtes.security.services.RefreshTokenService;
+import com.vtes.security.services.UserDetailsImpl;
 import com.vtes.service.EmailService;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
@@ -75,7 +75,7 @@ public class AuthController {
 					new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
 
 		} catch (Exception e) {
-			throw new AuthenticationFailedException();
+			throw new AuthenticationFailedException("Password or email invalid");
 		}
 
 		SecurityContextHolder.getContext().setAuthentication(authentication);

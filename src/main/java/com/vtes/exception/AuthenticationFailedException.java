@@ -10,15 +10,9 @@ public class AuthenticationFailedException extends Exception{
 	
 
 	public AuthenticationFailedException(String msg) {
-		super();
+		super(msg);
 		this.msg = msg;
 	}
-	
-
-	public AuthenticationFailedException() {
-		super();
-	}
-
 
 	public String getMsg() {
 		return msg;

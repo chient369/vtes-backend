@@ -1,4 +1,4 @@
-package com.vtes.sercurity.jwt;
+package com.vtes.security.jwt;
 
 import java.util.Date;
 
@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.vtes.sercurity.services.UserDetailsImpl;
+import com.vtes.security.services.UserDetailsImpl;
 
 import io.jsonwebtoken.*;
 
