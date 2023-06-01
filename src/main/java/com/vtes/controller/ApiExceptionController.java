@@ -17,6 +17,7 @@ import com.vtes.exception.BadRequestException;
 import com.vtes.exception.CommuterPassNotFound;
 import com.vtes.exception.FareNotFoundException;
 import com.vtes.exception.NotFoundCommuterPassValid;
+import com.vtes.exception.NotFoundTrainRoutesException;
 import com.vtes.exception.ParameterInvalidException;
 import com.vtes.exception.TokenRefreshException;
 import com.vtes.exception.UploadFileException;
@@ -55,7 +56,18 @@ public class ApiExceptionController {
 	@ResponseStatus(value = HttpStatus.NOT_FOUND)
 	public ResponseData notFoundCommuterPassValid(Exception ex) {
 		return ResponseData.builder()
-				.code("")
+				.code("API017_ER")
+				.message(ex.getMessage())
+				.type(ResponseType.ERROR)
+				.build();
+
+	}
+	
+	@ExceptionHandler(NotFoundTrainRoutesException.class)
+	@ResponseStatus(value = HttpStatus.NOT_FOUND)
+	public ResponseData notFoundTrainRoutes(Exception ex) {
+		return ResponseData.builder()
+				.code("API04_ER")
 				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();

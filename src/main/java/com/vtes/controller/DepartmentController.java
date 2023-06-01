@@ -17,7 +17,6 @@ import com.vtes.payload.response.ResponseData;
 import com.vtes.payload.response.ResponseData.ResponseType;
 import com.vtes.service.DepartmentService;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/v1/departments")
 public class DepartmentController {

@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import com.amazonaws.services.chimesdkmeetings.model.NotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vtes.exception.AccessKeyExpiredException;
-import com.vtes.exception.BadRequestException;
+import com.vtes.exception.NotFoundTrainRoutesException;
 import com.vtes.model.navitime.NavitimeExceptionMessage;
 
 import feign.RequestInterceptor;
@@ -86,8 +86,7 @@ public class FeignClientConfig {
 				return new AccessKeyExpiredException(currentKey);
 			}
 			if(message.getStatus_code() == 500) {
-				System.err.println(message.getMessage());
-				return new BadRequestException(message.getMessage());
+				return new NotFoundTrainRoutesException();
 			}
 			if(message.getStatus_code() == 404) {
 				return new NotFoundException(message.getMessage());
