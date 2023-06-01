@@ -1,24 +1,33 @@
 package com.vtes.service;
 
-import java.util.UUID;
+import java.time.Instant;
+
+import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.vtes.entity.CommuterPass;
 import com.vtes.entity.Department;
 import com.vtes.entity.User;
+import com.vtes.model.CommuterPassDTO;
 import com.vtes.payload.request.PasswordResetEmailRequest;
 import com.vtes.payload.request.PasswordResetRequest;
 import com.vtes.payload.request.UpdateInfoRequest;
-import com.vtes.payload.response.MessageResponse;
+import com.vtes.payload.response.ResponseData;
+import com.vtes.payload.response.ResponseData.ResponseType;
+import com.vtes.repository.CommuterPassRepo;
 import com.vtes.repository.DepartmentRepository;
 import com.vtes.repository.UserRepository;
-import com.vtes.sercurity.services.UserDetailsImpl;
+import com.vtes.security.jwt.JwtUtils;
+import com.vtes.security.services.UserDetailsImpl;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class UserServiceImpl implements UserService {
 
 	@Autowired
@@ -26,6 +35,12 @@ public class UserServiceImpl implements UserService {
 
 	@Autowired
 	private DepartmentRepository departmentRepository;
+	
+	@Autowired
+	private FareService fareService;
+
+	@Autowired
+	private CommuterPassRepo commuterPassRepo;
 
 	@Autowired
 	PasswordEncoder encoder;
@@ -33,106 +48,188 @@ public class UserServiceImpl implements UserService {
 	@Autowired
 	EmailService emailService;
 
+	@Autowired
+	JwtUtils jwtUtils;
+
 	@Override
 	public ResponseEntity<?> activeUser(String token) {
 		// TODO Auto-generated method stub
 		User user = new User();
-		if (!userRepository.findByVerifyCode(token).isEmpty()) {
-			user = userRepository.findByVerifyCode(token).get();
-			user.setVerifyCode(null);
-			user.setStatus((short) 1);
-			userRepository.save(user);
-			return ResponseEntity.ok(new MessageResponse("Account verify successfully", "INFO", "200"));
-		} else {
-			return ResponseEntity.badRequest().body(new MessageResponse("Verify code incorrect", "ERROR", "API005_ER"));
+
+		if (!isTokenActiveUserExists(token)) {
+			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API005_ER")
+					.message("Verify code incorrect").build());
 		}
+
+		if (!jwtUtils.validateJwtToken(token)) {
+			log.info("Verify code has expired : {}", token);
+
+			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API_ER01")
+					.message("Verify code has expired").build());
+		}
+
+		user = userRepository.findByVerifyCode(token).get();
+		user.setVerifyCode(null);
+		user.setStatus((short) 1);
+		userRepository.save(user);
+
+		log.info("User {} of account is active", user.getFullName());
+
+		return ResponseEntity.ok().body(ResponseData.builder().type(ResponseType.INFO).code("")
+				.message("Account verify successfully").build());
 
 	}
 
 	@Override
-	public ResponseEntity<?> updateUser(UpdateInfoRequest updateInfoRequest, UserDetailsImpl userDetailsImpl) {
-		// TODO Auto-generated method stub
+	public ResponseEntity<?> updateUser(@Valid UpdateInfoRequest updateInfoRequest, UserDetailsImpl userDetailsImpl) {
+		User user = getUserByEmail(userDetailsImpl.getEmail());
+		if (!departmentExists(updateInfoRequest.getDepartmentId())) {
+			log.debug("Bad request with department ID {}", updateInfoRequest.getDepartmentId());
 
-		User user = new User();
-
-		user = userRepository.findByEmail(userDetailsImpl.getEmail()).get();
-		if (departmentRepository.findById(updateInfoRequest.getDepartmentId()).isEmpty()) {
-			return ResponseEntity.badRequest().body(new MessageResponse("Department does not exits!", "ERROR", "XXX"));
+			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API_ER02")
+					.message("Invalid parameter").build());
 		}
 
-		Department department = new Department();
-		department = departmentRepository.findById(updateInfoRequest.getDepartmentId()).get();
+		Department department = getDepartmentById(updateInfoRequest.getDepartmentId());
 
-		if (updateInfoRequest.getPassword() == null) {
+		if (updateInfoRequest.getNewPassword() != null) {
+			if (!isPasswordValid(updateInfoRequest.getOldPassword(), user.getPassword()) && updateInfoRequest.getOldPassword() != null) {
 
-			user.setDepartment(department);
-			user.setFullName(updateInfoRequest.getFullName());
-		} else {
-			if (!encoder.matches(updateInfoRequest.getPassword(), user.getPassword())) {
-				return ResponseEntity.badRequest().body(new MessageResponse("Invalid password!", "ERROR", "AE08"));
-			}
-			if (updateInfoRequest.getPassword().equals(updateInfoRequest.getNewPassword())) {
-				return ResponseEntity.badRequest().body(new MessageResponse(
-						"The new password cannot be the same as the old password!", "ERROR", "AE08"));
+				log.info("{} of entered password not match", user.getFullName());
+
+				return ResponseEntity.ok().body(
+						ResponseData.builder().type(ResponseType.ERROR).code("").message("Old password is not match").build());
 			}
 
-			user.setDepartment(department);
-			user.setFullName(updateInfoRequest.getFullName());
-			user.setPassword(encoder.encode(updateInfoRequest.getPassword()));
+			updateUserPassword(user, updateInfoRequest.getNewPassword());
 		}
 
+		updateCommuterPass(user, userDetailsImpl.getId(), updateInfoRequest.getCommuterPass());
+
+		user.setDepartment(department);
+		user.setFullName(updateInfoRequest.getFullName());
+		user.setUpdateDt(Instant.now());
 		userRepository.save(user);
 
-		return new ResponseEntity<>(new MessageResponse("Update Successfull", "INFO", "200"), HttpStatus.OK);
+		return ResponseEntity.ok()
+				.body(ResponseData.builder().type(ResponseType.INFO).code("200").message("Update successfull").build());
+	}
+
+	private boolean isTokenActiveUserExists(String token) {
+		return !userRepository.findByVerifyCode(token).isEmpty();
+	}
+
+	private User getUserByEmail(String email) {
+		return userRepository.findByEmail(email).orElseThrow(() -> new IllegalArgumentException("User not found"));
+	}
+
+	private boolean departmentExists(Integer departmentId) {
+		return departmentRepository.existsById(departmentId);
+	}
+
+	private Department getDepartmentById(Integer departmentId) {
+		return departmentRepository.findById(departmentId)
+				.orElseThrow(() -> new IllegalArgumentException("Department not found"));
+	}
+
+	private boolean isPasswordValid(String password, String encodedPassword) {
+		return encoder.matches(password, encodedPassword);
+	}
+
+	private void updateUserPassword(User user, String password) {
+		user.setPassword(encoder.encode(password));
+	}
+
+	private void updateCommuterPass(User user, Integer userId, CommuterPassDTO commuterPassDTO) {
+		if (commuterPassDTO.getViaDetails() != null) {
+			String viaDetail = commuterPassDTO.getViaDetails().toString();
+
+			CommuterPass commuterPass = commuterPassRepo.findByUserId(userId).orElse(new CommuterPass());
+			commuterPass.setDeparture(commuterPassDTO.getDeparture());
+			commuterPass.setDestination(commuterPassDTO.getDestination());
+			commuterPass.setViaDetail(viaDetail);
+			commuterPass.setUser(new User(userId));
+			user.setCommuterPass(commuterPass);
+		}
 	}
 
 	@Override
 	public User getUser(String email) {
-		// TODO Auto-generated method stub
-		return userRepository.findByEmail(email).get();
+		User user = userRepository.findByEmail(email).get();
+		user.setFares(fareService.finByUserId(user.getId()));
+		return user;
 	}
 
 	@Override
 	public ResponseEntity<?> sendResetPasswordViaEmail(PasswordResetEmailRequest passwordResetEmailRequest) {
-		// TODO Auto-generated method stub
+
 		if (!userRepository.existsByEmail(passwordResetEmailRequest.getEmail())) {
-			return ResponseEntity.badRequest().body(new MessageResponse("Email  invalid", "ERROR", "API_ER04"));
+			log.info("Not found email : {}", passwordResetEmailRequest.getEmail());
+
+			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API003_ER")
+					.message("This entered email does not exist").build());
+
 		}
 
 		User user = new User();
 		user = userRepository.findByEmail(passwordResetEmailRequest.getEmail()).get();
 
 		if (user.getStatus() == 0) {
-			return ResponseEntity.badRequest()
-					.body(new MessageResponse("Error: User is not activated!", "ERROR", "XXX"));
+			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API001_ER02")
+					.message("This account is not active yet").build());
 		}
-		user.setVerifyCode(UUID.randomUUID().toString());
+		String tokenToResetPassword = jwtUtils.generateTokenToResetPassword(user.getEmail());
+
+		user.setVerifyCode(tokenToResetPassword);
 		userRepository.save(user);
 
 		emailService.sendResetPasswordViaEmail(passwordResetEmailRequest.getEmail(), user.getVerifyCode());
 
-		return new ResponseEntity<>(
-				new MessageResponse("We have sent an email. Please check email to reset password!", "INFO", "200"),
-				HttpStatus.OK);
+		return ResponseEntity.ok()
+				.body(ResponseData.builder().type(ResponseType.INFO).code("").message("Verify mail has sent").build());
 	}
 
 	@Override
 	public ResponseEntity<?> resetPassword(PasswordResetRequest passwordResetRequest) {
 		// TODO Auto-generated method stub
-		if (userRepository.findByVerifyCode(passwordResetRequest.getToken()).isEmpty()) {
-			return ResponseEntity.badRequest().body(new MessageResponse("Verify code does not exist!", "ERROR", "XXX"));
+
+		String tokenResetPassword = passwordResetRequest.getAuthToken();
+
+		if (!isTokenResetPasswordExists(tokenResetPassword)) {
+			log.info("Verify code does not exist : {}", passwordResetRequest.getAuthToken());
+
+			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API005_ER")
+					.message("Verify code incorrect").build());
 		}
+
+		if (!jwtUtils.validateJwtToken(tokenResetPassword)) {
+			log.info("Verify code has expired : {}", passwordResetRequest.getAuthToken());
+
+			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API_ER01")
+					.message("Verify code has expired").build());
+		}
+
 		User user = new User();
-		user = userRepository.findByVerifyCode(passwordResetRequest.getToken()).get();
+		user = userRepository.findByVerifyCode(tokenResetPassword).get();
 
 		if (user.getStatus() == 0) {
-			return ResponseEntity.badRequest().body(new MessageResponse("User is not activated!", "ERROR", "XXX"));
+			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API001_ER02")
+					.message("This account is not active yet").build());
 		}
 
 		user.setPassword(encoder.encode(passwordResetRequest.getNewPassword()));
 		user.setVerifyCode(null);
+		userRepository.save(user);
 
-		return new ResponseEntity<>(new MessageResponse("Reset password successfully!", "INFO", "200"), HttpStatus.OK);
+		log.info("{} reset password successfully!", user.getFullName());
+		return ResponseEntity.ok().body(ResponseData.builder().type(ResponseType.INFO).code("")
+				.message("Reset password successfully!").build());
+
+	}
+
+	private boolean isTokenResetPasswordExists(String token) {
+		return !userRepository.findByVerifyCode(token).isEmpty();
+
 	}
 
 }

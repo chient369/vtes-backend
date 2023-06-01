@@ -1,7 +1,22 @@
 package com.vtes.entity;
 
 import java.time.Instant;
-import javax.persistence.*;
+import java.util.List;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
+import javax.persistence.PreUpdate;
+import javax.persistence.Table;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,7 +31,7 @@ public class User {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "ID")
-	private Long id;
+	private Integer id;
 
 	@Column(name = "`FULL_NAME`")
 	private String fullName;
@@ -28,8 +43,21 @@ public class User {
 	private String password;
 
 	@ManyToOne
-	@JoinColumn(name = "DEPARTMENT_ID")
+	@JoinColumn(name = "DEPARTMENT_ID", referencedColumnName = "ID")
 	private Department department;
+
+	@OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+	private CommuterPass commuterPass;
+
+	@OneToMany(mappedBy = "user")
+	private List<FileData> files;
+
+	@OneToMany(mappedBy = "user",fetch = FetchType.LAZY)
+//	@JsonManagedReference
+	private List<Fare> fares;
+
+	@OneToOne(mappedBy = "user")
+	private RefreshToken refreshToken;
 
 	@Column(name = "`STATUS`")
 	private Short status;
@@ -43,12 +71,25 @@ public class User {
 	@Column(name = "`UPDATE_DT`")
 	private Instant updateDt;
 
+	@Column(name = "DELETE_FLAG")
+	private Boolean deleteFlag;
+
+	public User(Integer id) {
+		super();
+		this.id = id;
+	}
+
 	public User(String fullName, String email, String password, Department department) {
 		super();
 		this.fullName = fullName;
 		this.email = email;
 		this.password = password;
 		this.department = department;
+	}
+
+	@PreUpdate
+	public void preUpdate() {
+		this.updateDt = Instant.now();
 	}
 
 }

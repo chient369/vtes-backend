@@ -1,5 +1,8 @@
 package com.vtes.payload.response;
 
+import java.util.List;
+import com.vtes.model.CommuterPassDTO;
+import com.vtes.model.FareDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,5 +15,9 @@ public class UserResponse {
 
 	private String email;
 
-	private String departmentName;
+	private DepartmentResponse department;
+
+	private CommuterPassDTO commuterPass;
+
+	private List<FareDTO> fares;
 }

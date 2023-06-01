@@ -7,19 +7,21 @@ import lombok.Data;
 @Data
 public class SignupRequest {
 	@NotBlank
-//    @Size(min = 3, max = 20)
+	@Size(min = 8, max = 128)
 	private String fullName;
 
 	@NotNull
+	@Min(value = 1)
+	@Max(value = 999)
 	private int departmentId;
 
 	@NotBlank
-//    @Size(max = 50)
-//	@Email
+
+	@Pattern(regexp = ".+@vti\\.com\\.vn$")
 	private String email;
 
 	@NotBlank
-//    @Size(min = 6, max = 40)
+	@Size(min = 8, max = 64)
 	private String password;
 
 }

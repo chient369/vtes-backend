@@ -13,7 +13,7 @@ import com.vtes.entity.User;
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 	Optional<RefreshToken> findByToken(String token);
 
-	Optional<RefreshToken> findByUserId(Long userId);
+	Optional<RefreshToken> findByUserId(Integer userId);
 
 	@Modifying
 	int deleteByUser(User user);

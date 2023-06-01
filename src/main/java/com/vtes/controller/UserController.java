@@ -1,9 +1,10 @@
 package com.vtes.controller;
 
+import javax.validation.Valid;
+
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -13,18 +14,19 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vtes.entity.User;
 import com.vtes.payload.request.PasswordResetEmailRequest;
 import com.vtes.payload.request.PasswordResetRequest;
 import com.vtes.payload.request.UpdateInfoRequest;
-import com.vtes.payload.response.MessageWithDataResponse;
+import com.vtes.payload.request.UserActiveRequest;
+import com.vtes.payload.response.ResponseData;
+import com.vtes.payload.response.ResponseData.ResponseType;
 import com.vtes.payload.response.UserResponse;
 import com.vtes.repository.DepartmentRepository;
 import com.vtes.repository.UserRepository;
-import com.vtes.sercurity.services.UserDetailsImpl;
+import com.vtes.security.services.UserDetailsImpl;
 import com.vtes.service.EmailService;
 import com.vtes.service.UserService;
 
@@ -57,18 +59,18 @@ public class UserController {
 		UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication()
 				.getPrincipal();
 
-		User user = new User();
-		user = userService.getUser(userDetails.getEmail());
+		User user = userService.getUser(userDetails.getEmail());
 
 		UserResponse userRespons = modelMapper.map(user, new TypeToken<UserResponse>() {
 		}.getType());
-		return new ResponseEntity<>(new MessageWithDataResponse("", "INFO", "200", userRespons), HttpStatus.OK);
+		return ResponseEntity.ok().body(
+				ResponseData.builder().type(ResponseType.INFO).code("").message("Success").data(userRespons).build());
 	}
 
-	@GetMapping("/active")
-	public ResponseEntity<?> activeUser(@RequestParam String verifyCode) {
+	@PostMapping("/active")
+	public ResponseEntity<?> activeUser(@Valid @RequestBody UserActiveRequest userActiveRequest) {
 
-		return userService.activeUser(verifyCode);
+		return userService.activeUser(userActiveRequest.getVerifyCode());
 	}
 
 	@PostMapping("/emails")
@@ -80,13 +82,13 @@ public class UserController {
 	}
 
 	@PostMapping("/reset-password")
-	public ResponseEntity<?> resetPassword(@RequestBody PasswordResetRequest passwordResetRequest) {
+	public ResponseEntity<?> resetPassword(@Valid @RequestBody PasswordResetRequest passwordResetRequest) {
 		return userService.resetPassword(passwordResetRequest);
 
 	}
 
 	@PutMapping()
-	public ResponseEntity<?> updateUser(@RequestBody UpdateInfoRequest updateInfoRequest) {
+	public ResponseEntity<?> updateUser(@Valid @RequestBody UpdateInfoRequest updateInfoRequest) {
 		UserDetailsImpl userDetails = (UserDetailsImpl) SecurityContextHolder.getContext().getAuthentication()
 				.getPrincipal();
 
