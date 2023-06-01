@@ -6,21 +6,10 @@ public class AuthenticationFailedException extends Exception{
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private String msg;
 	
 
-	public AuthenticationFailedException(String msg) {
-		super(msg);
-		this.msg = msg;
-	}
+	public AuthenticationFailedException(String email) {
+		super(String.format("Authenticated failed with email : %s", email));
 
-	public String getMsg() {
-		return msg;
 	}
-
-	public void setMsg(String msg) {
-		this.msg = msg;
-	}
-	
-
 }

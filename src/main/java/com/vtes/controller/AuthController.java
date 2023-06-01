@@ -75,7 +75,7 @@ public class AuthController {
 					new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
 
 		} catch (Exception e) {
-			throw new AuthenticationFailedException("Password or email invalid");
+			throw new AuthenticationFailedException(loginRequest.getEmail());
 		}
 
 		SecurityContextHolder.getContext().setAuthentication(authentication);
