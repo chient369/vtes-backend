@@ -63,6 +63,7 @@ public class UserServiceImpl implements UserService {
 		if (!jwtUtils.validateJwtToken(token)) {
 			Optional<User> user = userRepository.findByVerifyCode(token);
 			if(user.isPresent()) {
+				log.info("Active failed user id {} has deleted.",user.get().getId());
 				userRepository.deleteById(user.get().getId());
 			}
 			
