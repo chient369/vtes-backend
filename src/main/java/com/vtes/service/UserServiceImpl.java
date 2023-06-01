@@ -1,6 +1,7 @@
 package com.vtes.service;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import javax.validation.Valid;
 
@@ -53,22 +54,24 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public ResponseEntity<?> activeUser(String token) {
-		// TODO Auto-generated method stub
-		User user = new User();
-
+	
 		if (!isTokenActiveUserExists(token)) {
 			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API005_ER")
 					.message("Verify code incorrect").build());
 		}
 
 		if (!jwtUtils.validateJwtToken(token)) {
+			Optional<User> user = userRepository.findByVerifyCode(token);
+			if(user.isPresent()) {
+				userRepository.deleteById(user.get().getId());
+			}
+			
 			log.info("Verify code has expired : {}", token);
-
 			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API_ER01")
 					.message("Verify code has expired").build());
 		}
 
-		user = userRepository.findByVerifyCode(token).get();
+		User user = userRepository.findByVerifyCode(token).get();
 		user.setVerifyCode(null);
 		user.setStatus((short) 1);
 		userRepository.save(user);
