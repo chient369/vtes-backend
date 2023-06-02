@@ -24,7 +24,7 @@ import com.vtes.repository.CommuterPassRepo;
 import com.vtes.repository.DepartmentRepository;
 import com.vtes.repository.UserRepository;
 import com.vtes.security.jwt.JwtUtils;
-import com.vtes.security.services.UserDetailsImpl;
+import com.vtes.security.service.UserDetailsImpl;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -147,6 +147,8 @@ public class UserServiceImpl implements UserService {
 			commuterPass.setViaDetail(viaDetail);
 			commuterPass.setUser(new User(userId));
 			user.setCommuterPass(commuterPass);
+			log.info("{} of commuter pass has updated.",user.getFullName());
+			System.out.println(viaDetail);
 		}
 	}
 

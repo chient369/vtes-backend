@@ -16,11 +16,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vtes.exception.NavitimeConnectException;
 import com.vtes.exception.NotFoundException;
+import com.vtes.exception.VtesException;
 import com.vtes.model.navitime.CommuterPassRoute;
 import com.vtes.model.navitime.Link;
 import com.vtes.model.navitime.Route;
@@ -61,7 +62,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 	@Autowired
 	private ObjectMapper objectMapper;
 
-	public List<Route> searchRoutes(Map<String, Object> params) {
+	public List<Route> searchRoutes(Map<String, Object> params) throws NavitimeConnectException {
 		List<Route> items = null;
 		SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
 		String formattedDateTime = sdf.format(new Date());
@@ -83,8 +84,8 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 			items = objectMapper.readValue(itemsNode.toString(), new TypeReference<List<Route>>() {
 			});
-		} catch (JsonProcessingException e) {
-			log.error("Has error when call 3rd API");
+		} catch (Exception e) {
+			throw new NavitimeConnectException("Has error when call 3rd API");
 		}
 
 		return items;
@@ -92,7 +93,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 	// Call the api to a 3rd party and filter out the points that are train stations
 	@Override
-	public List<Station> searchStationsByWord(String stationName) {
+	public List<Station> searchStationsByWord(String stationName) throws VtesException {
 
 		String jsonString = (String) redisTemplate.opsForValue().get(PREFIX_KEY + stationName);
 
@@ -125,11 +126,10 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		return null;
 	}
 
-	private List<Station> filterStations(String jsonString) {
+	private List<Station> filterStations(String jsonString) throws VtesException {
 		if (isNullObject(jsonString)) {
 			return new ArrayList<>();
 		}
-		;
 		try {
 			JsonNode node = objectMapper.readTree(jsonString);
 			JsonNode itemsNode = node.get(ITEMS);
@@ -138,14 +138,13 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 			return stations.stream().filter(s -> s.getTypes().contains(STATION))
 					.peek(s -> s.setName(s.getName() + STATION_JA)).collect(Collectors.toList());
-		} catch (JsonProcessingException e) {
-			log.debug("Error occurred while mapping to List<Station>");
+		} catch (Exception e) {
+			throw new VtesException("Error occurred while mapping to List<Station>");
 		}
 
-		return new ArrayList<>();
 	}
 
-	public List<CommuterPassRoute> searchCommuterPassDetail(Map<String, Object> params) throws NotFoundException{
+	public List<CommuterPassRoute> searchCommuterPassDetail(Map<String, Object> params) throws NotFoundException, NavitimeConnectException{
 		List<Route> routes = searchRoutes(params);
 		return convertCommuterPass(routes);
 

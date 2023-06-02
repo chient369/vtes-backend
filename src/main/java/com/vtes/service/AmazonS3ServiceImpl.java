@@ -35,7 +35,7 @@ public class AmazonS3ServiceImpl implements AmazonS3Service {
 				map.forEach(objectMetadata::addUserMetadata);
 			}
 		});
-		log.debug("Path: " + bucketName + ", FileName:" + fileName);
+		log.info("Path: {}, FileName: {} has uploaded successfully",bucketName,fileName );
 		return amazonS3.putObject(bucketName, fileName, inputStream, objectMetadata);
 	}
 

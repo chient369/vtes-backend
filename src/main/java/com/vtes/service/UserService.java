@@ -5,7 +5,7 @@ import com.vtes.exception.VtesException;
 import com.vtes.payload.EmailPayload;
 import com.vtes.payload.ResetPasswordPayload;
 import com.vtes.payload.UpdateUserPayload;
-import com.vtes.security.services.UserDetailsImpl;
+import com.vtes.security.service.UserDetailsImpl;
 
 public interface UserService {
 	User getUser(String email);
