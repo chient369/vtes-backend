@@ -22,7 +22,7 @@ import org.springframework.web.filter.CorsFilter;
 
 import com.vtes.security.jwt.AuthEntryPointJwt;
 import com.vtes.security.jwt.AuthTokenFilter;
-import com.vtes.security.services.UserDetailsServiceImpl;
+import com.vtes.security.service.UserDetailsServiceImpl;
 
 @Configuration
 @EnableGlobalMethodSecurity(prePostEnabled = true)
