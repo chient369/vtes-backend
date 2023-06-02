@@ -20,7 +20,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vtes.exception.NotFoundCommuterPassValid;
+import com.vtes.exception.NotFoundException;
 import com.vtes.model.navitime.CommuterPassRoute;
 import com.vtes.model.navitime.Link;
 import com.vtes.model.navitime.Route;
@@ -145,15 +145,14 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		return new ArrayList<>();
 	}
 
-	public List<CommuterPassRoute> searchCommuterPassDetail(Map<String, Object> params)
-			throws NotFoundCommuterPassValid {
+	public List<CommuterPassRoute> searchCommuterPassDetail(Map<String, Object> params) throws NotFoundException{
 		List<Route> routes = searchRoutes(params);
 		return convertCommuterPass(routes);
 
 	}
 
 	// Get route details and convert to a commuter pass used for next request
-	private List<CommuterPassRoute> convertCommuterPass(List<Route> routes) throws NotFoundCommuterPassValid {
+	private List<CommuterPassRoute> convertCommuterPass(List<Route> routes) throws NotFoundException{
 		List<CommuterPassRoute> cpDetails = new ArrayList<>();
 		for (Route route : routes) {
 			CommuterPassRoute cpRoute = new CommuterPassRoute();
@@ -172,7 +171,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 			}
 
 			if (cpLink.size() > 10) {
-				throw new NotFoundCommuterPassValid("Not found valid commuter pass");
+				throw new NotFoundException("APIAPI017_ER","Not found valid commuter pass");
 			}
 			cpRoute.setCommuterPassLink(cpLink);
 

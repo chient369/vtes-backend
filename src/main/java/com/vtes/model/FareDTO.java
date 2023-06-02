@@ -1,17 +1,11 @@
 package com.vtes.model;
 
-import java.text.ParseException;
 import java.util.Date;
-
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.vtes.entity.Fare;
-import com.vtes.entity.User;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -60,21 +54,5 @@ public class FareDTO {
 	@NotNull
 	@JsonIgnore
 	private boolean deleteFlag = false;
-
-	public Fare convertToFare() throws ParseException {
-		return Fare.builder().id(id)
-				.user(new User(userId))
-				.departure(departure)
-				.visitLocation(visitLocation)
-				.destination(destination)
-				.fee(fee).payMethod(payMethod)
-				.useCommuterPass(useCommuterPass)
-				.isRoundTrip(isRoundTrip)
-				.transportation(transportation)
-				.visitDate(visitDate)
-				.deleteFlag(deleteFlag)
-				.createDate(new Date())
-				.build();
-	}
-
 }
+

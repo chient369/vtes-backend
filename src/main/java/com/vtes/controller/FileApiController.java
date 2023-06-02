@@ -21,8 +21,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.vtes.entity.FileData;
 import com.vtes.exception.UploadFileException;
-import com.vtes.payload.response.ResponseData;
-import com.vtes.payload.response.ResponseData.ResponseType;
+import com.vtes.model.ResponseData;
+import com.vtes.model.ResponseData.ResponseType;
 import com.vtes.security.services.UserDetailsImpl;
 import com.vtes.service.FileDataService;
 

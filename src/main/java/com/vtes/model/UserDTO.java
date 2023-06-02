@@ -1,8 +1,7 @@
-package com.vtes.payload.response;
+package com.vtes.model;
 
 import java.util.List;
-import com.vtes.model.CommuterPassDTO;
-import com.vtes.model.FareDTO;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,12 +9,12 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserResponse {
+public class UserDTO {
 	private String fullName;
 
 	private String email;
 
-	private DepartmentResponse department;
+	private DepartmentDTO department;
 
 	private CommuterPassDTO commuterPass;
 

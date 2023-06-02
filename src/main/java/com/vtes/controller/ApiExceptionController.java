@@ -13,16 +13,14 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.vtes.exception.AuthenticationFailedException;
-import com.vtes.exception.BadRequestException;
-import com.vtes.exception.CommuterPassNotFound;
-import com.vtes.exception.FareNotFoundException;
-import com.vtes.exception.NotFoundCommuterPassValid;
-import com.vtes.exception.NotFoundTrainRoutesException;
+import com.vtes.exception.NotFoundException;
 import com.vtes.exception.ParameterInvalidException;
 import com.vtes.exception.TokenRefreshException;
 import com.vtes.exception.UploadFileException;
-import com.vtes.payload.response.ResponseData;
-import com.vtes.payload.response.ResponseData.ResponseType;
+import com.vtes.exception.UserException;
+import com.vtes.exception.VtesException;
+import com.vtes.model.ResponseData;
+import com.vtes.model.ResponseData.ResponseType;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,39 +39,29 @@ public class ApiExceptionController {
 
 	}
 	
-	@ExceptionHandler(BadRequestException.class)
+	
+	
+	@ExceptionHandler(UserException.class)
 	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-	public ResponseData badRequest(BadRequestException ex) {
+	public ResponseData userOfExceptionHandler(UserException ex) {
 		return ResponseData.builder()
-				.code("")
+				.code(ex.getCode())
 				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();
 	}
 	
 
-	@ExceptionHandler(NotFoundCommuterPassValid.class)
+	@ExceptionHandler(NotFoundException.class)
 	@ResponseStatus(value = HttpStatus.NOT_FOUND)
-	public ResponseData notFoundCommuterPassValid(Exception ex) {
+	public ResponseData notFoundCommuterPassValid(VtesException ex) {
 		return ResponseData.builder()
-				.code("API017_ER")
+				.code(ex.getCode())
 				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();
 
 	}
-	
-	@ExceptionHandler(NotFoundTrainRoutesException.class)
-	@ResponseStatus(value = HttpStatus.NOT_FOUND)
-	public ResponseData notFoundTrainRoutes(Exception ex) {
-		return ResponseData.builder()
-				.code("API04_ER")
-				.message(ex.getMessage())
-				.type(ResponseType.ERROR)
-				.build();
-
-	}
-	
 	@ExceptionHandler(AuthenticationFailedException.class)
 	@ResponseStatus(value = HttpStatus.UNAUTHORIZED)
 	public ResponseData authenFailedException(Exception ex) {
@@ -149,18 +137,6 @@ public class ApiExceptionController {
 				.build();
 
 	}
-
-	@ExceptionHandler(FareNotFoundException.class)
-	@ResponseStatus(value = HttpStatus.NOT_FOUND)
-	public ResponseData fareNotFoundException(FareNotFoundException ex) {
-		return ResponseData.builder()
-				.code("API010_ER")
-				.message("Not found fare record")
-				.type(ResponseType.WARINING)
-				.build();
-
-	}
-
 	@ExceptionHandler(MaxUploadSizeExceededException.class)
 	@ResponseStatus(value = HttpStatus.PAYLOAD_TOO_LARGE)
 	public ResponseData maxUploadSizeExceoption(Exception ex) {
@@ -191,18 +167,6 @@ public class ApiExceptionController {
 				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();
-	}
-
-	@ExceptionHandler(CommuterPassNotFound.class)
-	@ResponseStatus(value = HttpStatus.NOT_FOUND)
-	public ResponseData notFoundCommuterPass(Exception ex) {
-		
-		return ResponseData.builder()
-				.code("API008_ER")
-				.message(ex.getMessage())
-				.type(ResponseType.ERROR)
-				.build();
-
 	}
 
 }

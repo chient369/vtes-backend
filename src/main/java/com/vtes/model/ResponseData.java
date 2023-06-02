@@ -1,4 +1,4 @@
-package com.vtes.payload.response;
+package com.vtes.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;

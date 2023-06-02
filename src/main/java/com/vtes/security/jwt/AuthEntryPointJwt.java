@@ -14,8 +14,8 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vtes.payload.response.ResponseData;
-import com.vtes.payload.response.ResponseData.ResponseType;
+import com.vtes.model.ResponseData;
+import com.vtes.model.ResponseData.ResponseType;
 
 @Component
 public class AuthEntryPointJwt implements AuthenticationEntryPoint {

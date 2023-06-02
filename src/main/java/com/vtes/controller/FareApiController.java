@@ -18,10 +18,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.vtes.exception.FareNotFoundException;
+import com.vtes.exception.NotFoundException;
+import com.vtes.exception.VtesException;
 import com.vtes.model.FareDTO;
-import com.vtes.payload.response.ResponseData;
-import com.vtes.payload.response.ResponseData.ResponseType;
+import com.vtes.model.ResponseData;
+import com.vtes.model.ResponseData.ResponseType;
 import com.vtes.security.services.UserDetailsImpl;
 import com.vtes.service.FareService;
 
@@ -49,11 +50,11 @@ public class FareApiController {
 	}
 	@DeleteMapping(value = "/fares", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> deleteFareRecordById(
-			@RequestParam(name = "recordId",required = true) Integer recordId) throws FareNotFoundException {
+			@RequestParam(name = "recordId",required = true) Integer recordId) throws VtesException {
 		Integer userId = getAuthenticatedUserId();
 
 		if(!fareService.isExistFare(userId,recordId))
-			throw new FareNotFoundException("Fare ID ["+recordId+"] is not found");
+			throw new NotFoundException("API010_ER","Fare ID ["+recordId+"] is not found");
 		
 		fareService.deleteFareRecord(recordId);
 		return ResponseEntity.ok()

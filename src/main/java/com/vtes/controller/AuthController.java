@@ -25,10 +25,10 @@ import com.vtes.entity.RefreshToken;
 import com.vtes.entity.User;
 import com.vtes.exception.AuthenticationFailedException;
 import com.vtes.exception.TokenRefreshException;
-import com.vtes.payload.request.LoginRequest;
-import com.vtes.payload.request.SignupRequest;
-import com.vtes.payload.response.ResponseData;
-import com.vtes.payload.response.ResponseData.ResponseType;
+import com.vtes.model.ResponseData;
+import com.vtes.model.ResponseData.ResponseType;
+import com.vtes.payload.LoginPayload;
+import com.vtes.payload.RegisterPayload;
 import com.vtes.repository.DepartmentRepository;
 import com.vtes.repository.UserRepository;
 import com.vtes.security.jwt.CookieUtils;
@@ -42,31 +42,31 @@ import com.vtes.service.EmailService;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 	@Autowired
-	AuthenticationManager authenticationManager;
+	private AuthenticationManager authenticationManager;
 
 	@Autowired
-	UserRepository userRepository;
+	private UserRepository userRepository;
 
 	@Autowired
-	DepartmentRepository departmentRepository;
+	private DepartmentRepository departmentRepository;
 
 	@Autowired
-	EmailService emailService;
+	private EmailService emailService;
 
 	@Autowired
-	PasswordEncoder encoder;
+	private PasswordEncoder encoder;
 
 	@Autowired
-	JwtUtils jwtUtils;
+	private JwtUtils jwtUtils;
 
 	@Autowired
-	CookieUtils cookieUtils;
+	private CookieUtils cookieUtils;
 
 	@Autowired
-	RefreshTokenService refreshTokenService;
+	private RefreshTokenService refreshTokenService;
 
 	@PostMapping("/login")
-	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest,
+	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginPayload loginRequest,
 			HttpServletResponse httpServletResponse) throws AuthenticationFailedException {
 
 		Authentication authentication = null;
@@ -111,7 +111,7 @@ public class AuthController {
 	}
 
 	@PostMapping("/register")
-	public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+	public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterPayload signUpRequest) {
 
 		if (userRepository.existsByEmail(signUpRequest.getEmail())) {
 			return ResponseEntity.badRequest()
