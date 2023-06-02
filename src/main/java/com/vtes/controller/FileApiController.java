@@ -20,10 +20,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.vtes.entity.FileData;
+import com.vtes.exception.NotFoundException;
 import com.vtes.exception.UploadFileException;
 import com.vtes.model.ResponseData;
 import com.vtes.model.ResponseData.ResponseType;
-import com.vtes.security.services.UserDetailsImpl;
+import com.vtes.security.service.UserDetailsImpl;
 import com.vtes.service.FileDataService;
 
 @RestController
@@ -62,7 +63,7 @@ public class FileApiController {
 
 	@GetMapping(value = "/{fileId}")
 	public ResponseEntity<?> downloadFile(@PathVariable(value = "fileId", required = true) Integer fileId)
-			throws IOException {
+			throws IOException, NotFoundException {
 
 		Integer userId = getAuthenticatedUserId();
 		byte[] data = fileService.download(fileId, userId);

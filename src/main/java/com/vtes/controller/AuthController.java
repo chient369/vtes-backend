@@ -33,8 +33,8 @@ import com.vtes.repository.DepartmentRepository;
 import com.vtes.repository.UserRepository;
 import com.vtes.security.jwt.CookieUtils;
 import com.vtes.security.jwt.JwtUtils;
-import com.vtes.security.services.RefreshTokenService;
-import com.vtes.security.services.UserDetailsImpl;
+import com.vtes.security.service.RefreshTokenService;
+import com.vtes.security.service.UserDetailsImpl;
 import com.vtes.service.EmailService;
 
 @CrossOrigin(origins = "*", maxAge = 3600)

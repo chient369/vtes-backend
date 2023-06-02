@@ -23,7 +23,7 @@ import com.vtes.exception.VtesException;
 import com.vtes.model.FareDTO;
 import com.vtes.model.ResponseData;
 import com.vtes.model.ResponseData.ResponseType;
-import com.vtes.security.services.UserDetailsImpl;
+import com.vtes.security.service.UserDetailsImpl;
 import com.vtes.service.FareService;
 
 @RestController

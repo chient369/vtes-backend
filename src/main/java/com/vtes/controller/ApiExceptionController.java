@@ -1,7 +1,5 @@
 package com.vtes.controller;
 
-import javax.persistence.EntityNotFoundException;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -9,7 +7,6 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.vtes.exception.AuthenticationFailedException;
@@ -31,6 +28,7 @@ public class ApiExceptionController {
 	@ExceptionHandler(Exception.class)
 	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
 	public ResponseData badRequestResponse(Exception ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("")
 				.message("Server error")
@@ -40,10 +38,10 @@ public class ApiExceptionController {
 	}
 	
 	
-	
 	@ExceptionHandler(UserException.class)
-	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
+	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
 	public ResponseData userOfExceptionHandler(UserException ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code(ex.getCode())
 				.message(ex.getMessage())
@@ -55,6 +53,7 @@ public class ApiExceptionController {
 	@ExceptionHandler(NotFoundException.class)
 	@ResponseStatus(value = HttpStatus.NOT_FOUND)
 	public ResponseData notFoundCommuterPassValid(VtesException ex) {
+		log.debug("Error: {}",ex.getMessage());
 		return ResponseData.builder()
 				.code(ex.getCode())
 				.message(ex.getMessage())
@@ -64,11 +63,11 @@ public class ApiExceptionController {
 	}
 	@ExceptionHandler(AuthenticationFailedException.class)
 	@ResponseStatus(value = HttpStatus.UNAUTHORIZED)
-	public ResponseData authenFailedException(Exception ex) {
-		log.error(ex.getMessage());
+	public ResponseData authenFailedException(AuthenticationFailedException ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
-				.code("API001_ER01")
-				.message("Email or password invalid")
+				.code(ex.getCode())
+				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();
 
@@ -76,7 +75,8 @@ public class ApiExceptionController {
 
 	@ExceptionHandler(value = TokenRefreshException.class)
 	@ResponseStatus(HttpStatus.FORBIDDEN)
-	public ResponseData handleTokenRefreshException(TokenRefreshException ex, WebRequest request) {
+	public ResponseData handleTokenRefreshException(TokenRefreshException ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.type(ResponseType.ERROR)
 				.code("")
@@ -87,6 +87,7 @@ public class ApiExceptionController {
 	@ExceptionHandler(IllegalArgumentException.class)
 	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
 	public ResponseData methodArgumentTypeMissmatch(Exception ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("API_ER02")
 				.message(ex.getMessage())
@@ -97,6 +98,7 @@ public class ApiExceptionController {
 	@ExceptionHandler(ParameterInvalidException.class)
 	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
 	public ResponseData invalidParamExResponse(Exception ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("API_ER02")
 				.message("Invalid parameter")
@@ -140,6 +142,7 @@ public class ApiExceptionController {
 	@ExceptionHandler(MaxUploadSizeExceededException.class)
 	@ResponseStatus(value = HttpStatus.PAYLOAD_TOO_LARGE)
 	public ResponseData maxUploadSizeExceoption(Exception ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("API006_ER")
 				.message("This file size is too large")
@@ -150,23 +153,13 @@ public class ApiExceptionController {
 
 	@ExceptionHandler(UploadFileException.class)
 	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-	public ResponseData uploadFileError(Exception ex) {
+	public ResponseData uploadFileError(VtesException ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
-				.code("API_ER03")
+				.code(ex.getCode())	
 				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();
 
 	}
-
-	@ExceptionHandler(EntityNotFoundException.class)
-	@ResponseStatus(value = HttpStatus.NOT_FOUND)
-	public ResponseData notFoundResource(EntityNotFoundException ex) {
-		return ResponseData.builder()
-				.code("")
-				.message(ex.getMessage())
-				.type(ResponseType.ERROR)
-				.build();
-	}
-
 }

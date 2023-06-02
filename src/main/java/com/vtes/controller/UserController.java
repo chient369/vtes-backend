@@ -24,7 +24,7 @@ import com.vtes.payload.EmailPayload;
 import com.vtes.payload.ResetPasswordPayload;
 import com.vtes.payload.UpdateUserPayload;
 import com.vtes.payload.UserActiveTokenPayload;
-import com.vtes.security.services.UserDetailsImpl;
+import com.vtes.security.service.UserDetailsImpl;
 import com.vtes.service.UserServiceImpl;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
