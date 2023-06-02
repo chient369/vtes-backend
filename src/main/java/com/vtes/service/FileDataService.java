@@ -8,8 +8,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import javax.persistence.EntityNotFoundException;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,6 +19,7 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.util.IOUtils;
 import com.vtes.entity.FileData;
 import com.vtes.entity.User;
+import com.vtes.exception.NotFoundException;
 import com.vtes.exception.UploadFileException;
 import com.vtes.repository.FileDataRepo;
 
@@ -64,7 +63,6 @@ public class FileDataService {
 			fileDataRepo.save((new FileData(new User(userId), fileName, fileNameOnS3, new Date())));
 		
 		}else {
-			log.debug("Can not upload file with user {}",userId);
 			throw new UploadFileException(fileName);
 		}
 
@@ -73,8 +71,8 @@ public class FileDataService {
 	}
 
 	
-	public byte[] download(Integer id, Integer userId) {
-		FileData fileMeta = fileDataRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("File not found"));
+	public byte[] download(Integer id, Integer userId) throws NotFoundException {
+		FileData fileMeta = fileDataRepo.findById(id).orElseThrow(() -> new NotFoundException("File not found"));
 		S3Object s3Object = amazonS3ServiceImpl.download(bucketName, fileMeta.getFilePath());
 		
 		log.info("Downloading an object with key= " + fileMeta.getFilePath());

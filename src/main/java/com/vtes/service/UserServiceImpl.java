@@ -12,18 +12,25 @@ import org.springframework.stereotype.Service;
 
 import com.vtes.entity.CommuterPass;
 import com.vtes.entity.Department;
+import com.vtes.entity.RefreshToken;
 import com.vtes.entity.User;
+import com.vtes.exception.AuthenticationFailedException;
+import com.vtes.exception.NotFoundException;
+import com.vtes.exception.UserException;
+import com.vtes.exception.VtesException;
 import com.vtes.model.CommuterPassDTO;
-import com.vtes.payload.request.PasswordResetEmailRequest;
-import com.vtes.payload.request.PasswordResetRequest;
-import com.vtes.payload.request.UpdateInfoRequest;
-import com.vtes.payload.response.ResponseData;
-import com.vtes.payload.response.ResponseData.ResponseType;
+import com.vtes.model.ResponseData;
+import com.vtes.model.ResponseData.ResponseType;
+import com.vtes.payload.EmailPayload;
+import com.vtes.payload.RegisterPayload;
+import com.vtes.payload.ResetPasswordPayload;
+import com.vtes.payload.UpdateUserPayload;
 import com.vtes.repository.CommuterPassRepo;
 import com.vtes.repository.DepartmentRepository;
 import com.vtes.repository.UserRepository;
 import com.vtes.security.jwt.JwtUtils;
-import com.vtes.security.services.UserDetailsImpl;
+import com.vtes.security.service.RefreshTokenService;
+import com.vtes.security.service.UserDetailsImpl;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,20 +51,78 @@ public class UserServiceImpl implements UserService {
 	private CommuterPassRepo commuterPassRepo;
 
 	@Autowired
-	PasswordEncoder encoder;
+	private  PasswordEncoder encoder;
 
 	@Autowired
-	EmailService emailService;
+	private  EmailService emailService;
 
 	@Autowired
-	JwtUtils jwtUtils;
+	private JwtUtils jwtUtils;
 
+	
+	public User saveUser(RegisterPayload payload) throws VtesException {
+		if (isActiveUserAccount(payload.getEmail())) {
+			log.info("{} is trying to register ",payload.getEmail());
+			throw new UserException("API002_ER", "This email has already been used");
+		}
+
+		if (departmentRepository.findById(payload.getDepartmentId()).isEmpty()) {
+			throw new VtesException("", "Department id "+payload.getDepartmentId()+" not found");
+		}
+		
+		User savedUser ;
+
+		if(userRepository.existsByEmail(payload.getEmail())) {
+			savedUser = saveUserWhenNotActive(payload);
+		}else {
+			savedUser = saveNewUser(payload);
+		}
+		
+		if(savedUser != null) {
+			emailService.sendRegistrationUserConfirm(payload.getEmail(), savedUser.getVerifyCode());
+		}
+		return savedUser;
+		
+		
+
+	}
+	
+	private User saveUserWhenNotActive(RegisterPayload payload) {
+		Department department = new Department();
+		department = departmentRepository.findById(payload.getDepartmentId()).get();
+
+		User userDb = userRepository.findByEmail(payload.getEmail()).get();
+		userDb.setStatus((short) 0);
+		String tokenActive = jwtUtils.generateTokenToActiveUser(payload.getEmail());
+		userDb.setVerifyCode(tokenActive);
+		userDb.setCreateDt(Instant.now());
+		userDb.setDeleteFlag(false);
+		userDb.setDepartment(department);
+		User savedUser = userRepository.save(userDb);
+		
+		return savedUser;
+	}
+	private User saveNewUser(RegisterPayload payload) {
+		Department department = new Department();
+		department = departmentRepository.findById(payload.getDepartmentId()).get();
+
+		User user = new User(payload.getFullName(), payload.getEmail(),
+				encoder.encode(payload.getPassword()), department);
+		user.setStatus((short) 0);
+		String tokenActive = jwtUtils.generateTokenToActiveUser(payload.getEmail());
+		user.setVerifyCode(tokenActive);
+		user.setCreateDt(Instant.now());
+		user.setDeleteFlag(false);
+		User savedUser = userRepository.save(user);
+
+		return savedUser;
+	}
+	
 	@Override
-	public ResponseEntity<?> activeUser(String token) {
+	public void activeUser(String token) throws AuthenticationFailedException {
 	
 		if (!isTokenActiveUserExists(token)) {
-			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API005_ER")
-					.message("Verify code incorrect").build());
+			throw new AuthenticationFailedException("API005_ER","Verify code incorrect");
 		}
 
 		if (!jwtUtils.validateJwtToken(token)) {
@@ -68,8 +133,7 @@ public class UserServiceImpl implements UserService {
 			}
 			
 			log.info("Verify code has expired : {}", token);
-			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API_ER01")
-					.message("Verify code has expired").build());
+			throw new AuthenticationFailedException("API_ER01","Verify code has expired");
 		}
 
 		User user = userRepository.findByVerifyCode(token).get();
@@ -79,19 +143,14 @@ public class UserServiceImpl implements UserService {
 
 		log.info("User {} of account is active", user.getFullName());
 
-		return ResponseEntity.ok().body(ResponseData.builder().type(ResponseType.INFO).code("")
-				.message("Account verify successfully").build());
-
 	}
 
 	@Override
-	public ResponseEntity<?> updateUser(@Valid UpdateInfoRequest updateInfoRequest, UserDetailsImpl userDetailsImpl) {
+	public User updateUser(@Valid UpdateUserPayload updateInfoRequest, UserDetailsImpl userDetailsImpl) throws VtesException {
 		User user = getUserByEmail(userDetailsImpl.getEmail());
 		if (!departmentExists(updateInfoRequest.getDepartmentId())) {
 			log.debug("Bad request with department ID {}", updateInfoRequest.getDepartmentId());
-
-			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API_ER02")
-					.message("Invalid parameter").build());
+			throw new VtesException("API_ER02","Invalid parameter");
 		}
 
 		Department department = getDepartmentById(updateInfoRequest.getDepartmentId());
@@ -100,9 +159,7 @@ public class UserServiceImpl implements UserService {
 			if (!isPasswordValid(updateInfoRequest.getOldPassword(), user.getPassword()) && updateInfoRequest.getOldPassword() != null) {
 
 				log.info("{} of entered password not match", user.getFullName());
-
-				return ResponseEntity.ok().body(
-						ResponseData.builder().type(ResponseType.ERROR).code("").message("Old password is not match").build());
+				throw new VtesException("","Old password is not match");
 			}
 
 			updateUserPassword(user, updateInfoRequest.getNewPassword());
@@ -113,10 +170,11 @@ public class UserServiceImpl implements UserService {
 		user.setDepartment(department);
 		user.setFullName(updateInfoRequest.getFullName());
 		user.setUpdateDt(Instant.now());
-		userRepository.save(user);
-
-		return ResponseEntity.ok()
-				.body(ResponseData.builder().type(ResponseType.INFO).code("200").message("Update successfull").build());
+		User updatedUser = userRepository.save(user);
+		
+		log.info("{} update successfully", user.getFullName());
+		return updatedUser;
+		
 	}
 
 	private boolean isTokenActiveUserExists(String token) {
@@ -165,60 +223,48 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public ResponseEntity<?> sendResetPasswordViaEmail(PasswordResetEmailRequest passwordResetEmailRequest) {
+	public void sendResetPasswordViaEmail(EmailPayload payload) throws VtesException {
 
-		if (!userRepository.existsByEmail(passwordResetEmailRequest.getEmail())) {
-			log.info("Not found email : {}", passwordResetEmailRequest.getEmail());
-
-			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API003_ER")
-					.message("This entered email does not exist").build());
+		if (!userRepository.existsByEmail(payload.getEmail())) {
+			throw new NotFoundException("API003_ER","This entered email does not exist");			
 
 		}
-
-		User user = new User();
-		user = userRepository.findByEmail(passwordResetEmailRequest.getEmail()).get();
+ 
+		User user = userRepository.findByEmail(payload.getEmail()).get();
 
 		if (user.getStatus() == 0) {
-			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API001_ER02")
-					.message("This account is not active yet").build());
+			throw new UserException("API001_ER02","This account is not active yet");
 		}
 		String tokenToResetPassword = jwtUtils.generateTokenToResetPassword(user.getEmail());
 
 		user.setVerifyCode(tokenToResetPassword);
 		userRepository.save(user);
 
-		emailService.sendResetPasswordViaEmail(passwordResetEmailRequest.getEmail(), user.getVerifyCode());
+		emailService.sendResetPasswordViaEmail(payload.getEmail(), user.getVerifyCode());
 
-		return ResponseEntity.ok()
-				.body(ResponseData.builder().type(ResponseType.INFO).code("").message("Verify mail has sent").build());
 	}
 
 	@Override
-	public ResponseEntity<?> resetPassword(PasswordResetRequest passwordResetRequest) {
-		// TODO Auto-generated method stub
+	public void resetPassword(ResetPasswordPayload passwordResetRequest) throws VtesException {
 
 		String tokenResetPassword = passwordResetRequest.getAuthToken();
 
 		if (!isTokenResetPasswordExists(tokenResetPassword)) {
 			log.info("Verify code does not exist : {}", passwordResetRequest.getAuthToken());
+			throw new AuthenticationFailedException("API005_ER","Verify code incorrect");
 
-			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API005_ER")
-					.message("Verify code incorrect").build());
 		}
 
 		if (!jwtUtils.validateJwtToken(tokenResetPassword)) {
 			log.info("Verify code has expired : {}", passwordResetRequest.getAuthToken());
-
-			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API_ER01")
-					.message("Verify code has expired").build());
+			throw new AuthenticationFailedException("API_ER01","Verify code has expired");
 		}
 
 		User user = new User();
 		user = userRepository.findByVerifyCode(tokenResetPassword).get();
 
 		if (user.getStatus() == 0) {
-			return ResponseEntity.badRequest().body(ResponseData.builder().type(ResponseType.ERROR).code("API001_ER02")
-					.message("This account is not active yet").build());
+			throw new UserException("API001_ER02","This account is not active yet");
 		}
 
 		user.setPassword(encoder.encode(passwordResetRequest.getNewPassword()));
@@ -226,14 +272,22 @@ public class UserServiceImpl implements UserService {
 		userRepository.save(user);
 
 		log.info("{} reset password successfully!", user.getFullName());
-		return ResponseEntity.ok().body(ResponseData.builder().type(ResponseType.INFO).code("")
-				.message("Reset password successfully!").build());
+
 
 	}
 
 	private boolean isTokenResetPasswordExists(String token) {
 		return !userRepository.findByVerifyCode(token).isEmpty();
 
+	}
+	public boolean isActiveUserAccount(String email) {
+		return userRepository.findActiveUserByEmail(email) > 0;
+
+	}
+
+	public User findUserById(Integer userId) throws NotFoundException {
+	    return userRepository.findById(userId)
+	            .orElseThrow(() -> new NotFoundException("User not found: " + userId));
 	}
 
 }

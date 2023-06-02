@@ -12,12 +12,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vtes.entity.Department;
-import com.vtes.payload.response.DepartmentResponse;
-import com.vtes.payload.response.ResponseData;
-import com.vtes.payload.response.ResponseData.ResponseType;
+import com.vtes.model.DepartmentDTO;
+import com.vtes.model.ResponseData;
+import com.vtes.model.ResponseData.ResponseType;
 import com.vtes.service.DepartmentService;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/v1/departments")
 public class DepartmentController {
@@ -32,8 +31,8 @@ public class DepartmentController {
 	public ResponseEntity<?> getAllDepartments() {
 		List<Department> departments = departmentService.getAllDepartments();
 
-		List<DepartmentResponse> departmentResponses = modelMapper.map(departments,
-				new TypeToken<List<DepartmentResponse>>() {
+		List<DepartmentDTO> departmentResponses = modelMapper.map(departments,
+				new TypeToken<List<DepartmentDTO>>() {
 				}.getType());
 		return ResponseEntity.ok()
 				.body(ResponseData.builder()

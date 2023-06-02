@@ -18,17 +18,18 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vtes.entity.CommuterPass;
-import com.vtes.exception.CommuterPassNotFound;
-import com.vtes.exception.NotFoundCommuterPassValid;
+import com.vtes.exception.NavitimeConnectException;
+import com.vtes.exception.NotFoundException;
 import com.vtes.exception.ParameterInvalidException;
+import com.vtes.exception.VtesException;
+import com.vtes.model.ResponseData;
+import com.vtes.model.ResponseData.ResponseType;
 import com.vtes.model.navitime.CommuterPassRoute;
 import com.vtes.model.navitime.Node;
 import com.vtes.model.navitime.Route;
 import com.vtes.model.navitime.Station;
-import com.vtes.payload.response.ResponseData;
-import com.vtes.payload.response.ResponseData.ResponseType;
 import com.vtes.repository.CommuterPassRepo;
-import com.vtes.security.services.UserDetailsImpl;
+import com.vtes.security.service.UserDetailsImpl;
 import com.vtes.service.TransportInfomationServiceImpl;
 
 import lombok.extern.slf4j.Slf4j;
@@ -55,7 +56,7 @@ public class TransportAPIController {
 			@RequestParam(name = "goal", required = true) String goal,
 			@RequestParam(name = "viaCode", required = false) String[] via,
 			@RequestParam(name = "commuterPass", required = false) boolean cpActive)
-			throws ParameterInvalidException, CommuterPassNotFound {
+			throws ParameterInvalidException, NotFoundException, NavitimeConnectException {
 
 		Map<String, Object> params = new HashMap<>();
 		params.put("start", start);
@@ -70,7 +71,7 @@ public class TransportAPIController {
 			Optional<CommuterPass> commuterPassOptional = repo.findByUserId(userId);
 			if (!commuterPassOptional.isPresent()) {
 				log.warn("Not found commuter pass with user id {}", userId);
-				throw new CommuterPassNotFound(userId);
+				throw new NotFoundException("API008_ER","Commuter pass is not found");
 			}
 			CommuterPass commuterPass = commuterPassOptional.get();
 			params.put("commuter_pass", commuterPass.getViaDetail());
@@ -85,7 +86,7 @@ public class TransportAPIController {
 
 	@GetMapping("/stations")
 	public ResponseEntity<?> getStationsByWord(@RequestParam(name = "stationName", required = true) String word)
-			throws ParameterInvalidException {
+			throws ParameterInvalidException, VtesException {
 		
 		List<Station> stations = transportService.searchStationsByWord(word);
 		return ResponseEntity.ok().body(ResponseData.builder()
@@ -98,7 +99,7 @@ public class TransportAPIController {
 
 	@GetMapping("/cp-routes")
 	public ResponseEntity<?> getCommuterPass(@RequestParam(name = "start", required = true) String start,
-			@RequestParam(name = "goal", required = true) String goal) throws ParameterInvalidException, NotFoundCommuterPassValid {
+			@RequestParam(name = "goal", required = true) String goal) throws ParameterInvalidException, NotFoundException, NavitimeConnectException {
 
 		Map<String, Object> params = new HashMap<>();
 		params.put("start", start);

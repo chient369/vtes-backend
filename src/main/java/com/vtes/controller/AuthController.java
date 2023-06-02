@@ -24,50 +24,45 @@ import com.vtes.entity.Department;
 import com.vtes.entity.RefreshToken;
 import com.vtes.entity.User;
 import com.vtes.exception.AuthenticationFailedException;
+import com.vtes.exception.NotFoundException;
 import com.vtes.exception.TokenRefreshException;
-import com.vtes.payload.request.LoginRequest;
-import com.vtes.payload.request.SignupRequest;
-import com.vtes.payload.response.ResponseData;
-import com.vtes.payload.response.ResponseData.ResponseType;
+import com.vtes.exception.UserException;
+import com.vtes.exception.VtesException;
+import com.vtes.model.ResponseData;
+import com.vtes.model.ResponseData.ResponseType;
+import com.vtes.payload.LoginPayload;
+import com.vtes.payload.RegisterPayload;
 import com.vtes.repository.DepartmentRepository;
 import com.vtes.repository.UserRepository;
 import com.vtes.security.jwt.CookieUtils;
 import com.vtes.security.jwt.JwtUtils;
-import com.vtes.security.services.RefreshTokenService;
-import com.vtes.security.services.UserDetailsImpl;
+import com.vtes.security.service.RefreshTokenService;
+import com.vtes.security.service.UserDetailsImpl;
 import com.vtes.service.EmailService;
+import com.vtes.service.UserServiceImpl;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 	@Autowired
-	AuthenticationManager authenticationManager;
+	private AuthenticationManager authenticationManager;
 
 	@Autowired
-	UserRepository userRepository;
+	private UserServiceImpl userService;
 
 	@Autowired
-	DepartmentRepository departmentRepository;
+	private JwtUtils jwtUtils;
 
 	@Autowired
-	EmailService emailService;
+	private RefreshTokenService refreshTokenService;
 
 	@Autowired
-	PasswordEncoder encoder;
-
-	@Autowired
-	JwtUtils jwtUtils;
-
-	@Autowired
-	CookieUtils cookieUtils;
-
-	@Autowired
-	RefreshTokenService refreshTokenService;
+	private CookieUtils cookieUtils;
 
 	@PostMapping("/login")
-	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest,
-			HttpServletResponse httpServletResponse) throws AuthenticationFailedException {
+	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginPayload loginRequest,
+			HttpServletResponse httpServletResponse) throws VtesException {
 
 		Authentication authentication = null;
 		try {
@@ -75,20 +70,16 @@ public class AuthController {
 					new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
 
 		} catch (Exception e) {
-			throw new AuthenticationFailedException("Password or email invalid");
+			throw new AuthenticationFailedException(loginRequest.getEmail());
 		}
 
 		SecurityContextHolder.getContext().setAuthentication(authentication);
 
 		UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-		User user = new User();
-		user = userRepository.findById(userDetails.getId()).get();
-		if (user.getStatus() == 0) {
-			return ResponseEntity.badRequest()
-					.body(ResponseData.builder()
-							.code("API001_ER02")
-							.type(ResponseType.ERROR)
-							.message("This account is not active yet").build());
+
+		if (!userService.isActiveUserAccount(userDetails.getEmail())) {
+			throw new UserException("API001_ER02", "This account is not active yet");
+
 		}
 
 		String jwt = jwtUtils.generateJwtToken(userDetails);
@@ -101,54 +92,22 @@ public class AuthController {
 			cookieUtils.createAccessTokenCookie(httpServletResponse, jwt);
 		}
 
-		return ResponseEntity.ok().body(
-				ResponseData.builder()
-					.code("").
-					type(ResponseType.INFO)
-					.message("Authentication successfull")
-					.build());
+		return ResponseEntity.ok().body(ResponseData.builder()
+													.code("")
+													.type(ResponseType.INFO)
+													.message("Authentication successfull")
+													.build());
 
 	}
 
 	@PostMapping("/register")
-	public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
-
-		if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-			return ResponseEntity.badRequest()
-					.body(ResponseData.builder()
-							.code("API002_ER")
-							.type(ResponseType.ERROR)
-							.message("This email has already been used")
-							.build());
-		}
-
-		if (departmentRepository.findById(signUpRequest.getDepartmentId()).isEmpty()) {
-			return ResponseEntity.badRequest()
-					.body(ResponseData.builder()
-							.code("API_ER04")
-							.type(ResponseType.ERROR)
-							.message("Department ID is required")
-							.build());
-		}
-
-		Department department = new Department();
-		department = departmentRepository.findById(signUpRequest.getDepartmentId()).get();
-
-		User user = new User(signUpRequest.getFullName(), signUpRequest.getEmail(),
-				encoder.encode(signUpRequest.getPassword()), department);
-		user.setStatus((short) 0);
-		String tokenActive = jwtUtils.generateTokenToActiveUser(signUpRequest.getEmail());
-		user.setVerifyCode(tokenActive);
-		user.setCreateDt(Instant.now());
-		user.setDeleteFlag(false);
-		userRepository.save(user);
-		emailService.sendRegistrationUserConfirm(signUpRequest.getEmail(), tokenActive);
-
+	public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterPayload payload) throws VtesException {
+		User savedUser = userService.saveUser(payload);
 		return ResponseEntity.ok()
-				.body(ResponseData.builder()
-						.code("")
-						.type(ResponseType.INFO)
-						.message("Register successfull").build());
+							.body(ResponseData.builder()
+							.code("").type(ResponseType.INFO)
+							.message("Register successfull")
+							.build());
 
 	}
 

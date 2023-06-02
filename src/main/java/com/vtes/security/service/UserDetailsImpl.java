@@ -1,4 +1,4 @@
-package com.vtes.security.services;
+package com.vtes.security.service;
 
 import java.util.ArrayList;
 import java.util.Collection;

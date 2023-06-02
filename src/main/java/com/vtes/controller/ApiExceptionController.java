@@ -1,7 +1,5 @@
 package com.vtes.controller;
 
-import javax.persistence.EntityNotFoundException;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -9,19 +7,17 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.vtes.exception.AuthenticationFailedException;
-import com.vtes.exception.BadRequestException;
-import com.vtes.exception.CommuterPassNotFound;
-import com.vtes.exception.FareNotFoundException;
-import com.vtes.exception.NotFoundCommuterPassValid;
+import com.vtes.exception.NotFoundException;
 import com.vtes.exception.ParameterInvalidException;
 import com.vtes.exception.TokenRefreshException;
 import com.vtes.exception.UploadFileException;
-import com.vtes.payload.response.ResponseData;
-import com.vtes.payload.response.ResponseData.ResponseType;
+import com.vtes.exception.UserException;
+import com.vtes.exception.VtesException;
+import com.vtes.model.ResponseData;
+import com.vtes.model.ResponseData.ResponseType;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,6 +28,7 @@ public class ApiExceptionController {
 	@ExceptionHandler(Exception.class)
 	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
 	public ResponseData badRequestResponse(Exception ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("")
 				.message("Server error")
@@ -40,35 +37,37 @@ public class ApiExceptionController {
 
 	}
 	
-	@ExceptionHandler(BadRequestException.class)
-	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-	public ResponseData badRequest(BadRequestException ex) {
+	
+	@ExceptionHandler(UserException.class)
+	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
+	public ResponseData userOfExceptionHandler(UserException ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
-				.code("")
+				.code(ex.getCode())
 				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();
 	}
 	
 
-	@ExceptionHandler(NotFoundCommuterPassValid.class)
+	@ExceptionHandler(NotFoundException.class)
 	@ResponseStatus(value = HttpStatus.NOT_FOUND)
-	public ResponseData notFoundCommuterPassValid(Exception ex) {
+	public ResponseData notFoundCommuterPassValid(VtesException ex) {
+		log.debug("Error: {}",ex.getMessage());
 		return ResponseData.builder()
-				.code("")
+				.code(ex.getCode())
 				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();
 
 	}
-	
 	@ExceptionHandler(AuthenticationFailedException.class)
 	@ResponseStatus(value = HttpStatus.UNAUTHORIZED)
-	public ResponseData authenFailedException(Exception ex) {
-		log.error(ex.getMessage());
+	public ResponseData authenFailedException(AuthenticationFailedException ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
-				.code("API001_ER01")
-				.message("Email or password invalid")
+				.code(ex.getCode())
+				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();
 
@@ -76,7 +75,8 @@ public class ApiExceptionController {
 
 	@ExceptionHandler(value = TokenRefreshException.class)
 	@ResponseStatus(HttpStatus.FORBIDDEN)
-	public ResponseData handleTokenRefreshException(TokenRefreshException ex, WebRequest request) {
+	public ResponseData handleTokenRefreshException(TokenRefreshException ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.type(ResponseType.ERROR)
 				.code("")
@@ -87,6 +87,7 @@ public class ApiExceptionController {
 	@ExceptionHandler(IllegalArgumentException.class)
 	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
 	public ResponseData methodArgumentTypeMissmatch(Exception ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("API_ER02")
 				.message(ex.getMessage())
@@ -97,6 +98,7 @@ public class ApiExceptionController {
 	@ExceptionHandler(ParameterInvalidException.class)
 	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
 	public ResponseData invalidParamExResponse(Exception ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("API_ER02")
 				.message("Invalid parameter")
@@ -137,21 +139,10 @@ public class ApiExceptionController {
 				.build();
 
 	}
-
-	@ExceptionHandler(FareNotFoundException.class)
-	@ResponseStatus(value = HttpStatus.NOT_FOUND)
-	public ResponseData fareNotFoundException(FareNotFoundException ex) {
-		return ResponseData.builder()
-				.code("API010_ER")
-				.message("Not found fare record")
-				.type(ResponseType.WARINING)
-				.build();
-
-	}
-
 	@ExceptionHandler(MaxUploadSizeExceededException.class)
 	@ResponseStatus(value = HttpStatus.PAYLOAD_TOO_LARGE)
 	public ResponseData maxUploadSizeExceoption(Exception ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("API006_ER")
 				.message("This file size is too large")
@@ -162,35 +153,13 @@ public class ApiExceptionController {
 
 	@ExceptionHandler(UploadFileException.class)
 	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-	public ResponseData uploadFileError(Exception ex) {
+	public ResponseData uploadFileError(VtesException ex) {
+		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
-				.code("API_ER03")
+				.code(ex.getCode())	
 				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();
 
 	}
-
-	@ExceptionHandler(EntityNotFoundException.class)
-	@ResponseStatus(value = HttpStatus.NOT_FOUND)
-	public ResponseData notFoundResource(EntityNotFoundException ex) {
-		return ResponseData.builder()
-				.code("")
-				.message(ex.getMessage())
-				.type(ResponseType.ERROR)
-				.build();
-	}
-
-	@ExceptionHandler(CommuterPassNotFound.class)
-	@ResponseStatus(value = HttpStatus.NOT_FOUND)
-	public ResponseData notFoundCommuterPass(Exception ex) {
-		
-		return ResponseData.builder()
-				.code("API008_ER")
-				.message(ex.getMessage())
-				.type(ResponseType.ERROR)
-				.build();
-
-	}
-
 }
