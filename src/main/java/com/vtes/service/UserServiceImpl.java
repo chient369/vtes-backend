@@ -159,7 +159,7 @@ public class UserServiceImpl implements UserService {
 			if (!isPasswordValid(updateInfoRequest.getOldPassword(), user.getPassword()) && updateInfoRequest.getOldPassword() != null) {
 
 				log.info("{} of entered password not match", user.getFullName());
-				throw new VtesException("","Old password is not match");
+				throw new VtesException("API004_ER","Old password is not match");
 			}
 
 			updateUserPassword(user, updateInfoRequest.getNewPassword());
