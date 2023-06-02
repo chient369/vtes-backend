@@ -16,6 +16,7 @@ import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import feign.Response;
 import feign.codec.ErrorDecoder;
+import lombok.extern.slf4j.Slf4j;
 
 /*
  * @Author: chien.tranvan
@@ -24,6 +25,7 @@ import feign.codec.ErrorDecoder;
  */
 
 @Configuration
+@Slf4j
 public class FeignClientConfig {
 
 	private final RapidAPIAccessKeyManager accessKeyManager;
@@ -82,7 +84,10 @@ public class FeignClientConfig {
 			
 			if (response.status() == TOO_MANY_REQUEST) {
 				String currentKey = accessKeyManager.getCurrentAccessKey();
+				String keyIndex = accessKeyManager.getKeyIndex();
+				
 				accessKeyManager.rotateAccesskey();
+				log.info("Current access key index = {} , key = {}",keyIndex,currentKey);
 				return new AccessKeyExpiredException(currentKey);
 			}
 			if(message.getStatus_code() == 500) {
