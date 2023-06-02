@@ -6,6 +6,7 @@ public class VtesException extends Exception{
 	
 	private String code;
 	private String message;
+	
 	public VtesException(String code, String message) {
 		super(message);
 		this.code = code;
