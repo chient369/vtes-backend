@@ -6,21 +6,17 @@ import java.util.Optional;
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.vtes.entity.CommuterPass;
 import com.vtes.entity.Department;
-import com.vtes.entity.RefreshToken;
 import com.vtes.entity.User;
 import com.vtes.exception.AuthenticationFailedException;
 import com.vtes.exception.NotFoundException;
 import com.vtes.exception.UserException;
 import com.vtes.exception.VtesException;
 import com.vtes.model.CommuterPassDTO;
-import com.vtes.model.ResponseData;
-import com.vtes.model.ResponseData.ResponseType;
 import com.vtes.payload.EmailPayload;
 import com.vtes.payload.RegisterPayload;
 import com.vtes.payload.ResetPasswordPayload;
@@ -29,7 +25,6 @@ import com.vtes.repository.CommuterPassRepo;
 import com.vtes.repository.DepartmentRepository;
 import com.vtes.repository.UserRepository;
 import com.vtes.security.jwt.JwtUtils;
-import com.vtes.security.service.RefreshTokenService;
 import com.vtes.security.service.UserDetailsImpl;
 
 import lombok.extern.slf4j.Slf4j;

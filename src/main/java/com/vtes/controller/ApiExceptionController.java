@@ -25,13 +25,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ApiExceptionController {
 
-	@ExceptionHandler(Exception.class)
+	@ExceptionHandler(VtesException.class)
 	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-	public ResponseData badRequestResponse(Exception ex) {
+	public ResponseData badRequestResponse(VtesException ex) {
 		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
-				.code("")
-				.message("Server error")
+				.code(ex.getCode()== null ? "":ex.getCode())
+				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();
 
@@ -41,7 +41,6 @@ public class ApiExceptionController {
 	@ExceptionHandler(UserException.class)
 	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
 	public ResponseData userOfExceptionHandler(UserException ex) {
-		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code(ex.getCode())
 				.message(ex.getMessage())
@@ -64,7 +63,6 @@ public class ApiExceptionController {
 	@ExceptionHandler(AuthenticationFailedException.class)
 	@ResponseStatus(value = HttpStatus.UNAUTHORIZED)
 	public ResponseData authenFailedException(AuthenticationFailedException ex) {
-		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code(ex.getCode())
 				.message(ex.getMessage())
