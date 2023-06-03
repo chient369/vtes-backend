@@ -1,7 +1,5 @@
 package com.vtes.controller;
 
-import java.time.Instant;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
@@ -12,7 +10,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,11 +17,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.vtes.entity.Department;
 import com.vtes.entity.RefreshToken;
 import com.vtes.entity.User;
 import com.vtes.exception.AuthenticationFailedException;
-import com.vtes.exception.NotFoundException;
 import com.vtes.exception.TokenRefreshException;
 import com.vtes.exception.UserException;
 import com.vtes.exception.VtesException;
@@ -32,13 +27,10 @@ import com.vtes.model.ResponseData;
 import com.vtes.model.ResponseData.ResponseType;
 import com.vtes.payload.LoginPayload;
 import com.vtes.payload.RegisterPayload;
-import com.vtes.repository.DepartmentRepository;
-import com.vtes.repository.UserRepository;
 import com.vtes.security.jwt.CookieUtils;
 import com.vtes.security.jwt.JwtUtils;
 import com.vtes.security.service.RefreshTokenService;
 import com.vtes.security.service.UserDetailsImpl;
-import com.vtes.service.EmailService;
 import com.vtes.service.UserServiceImpl;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
