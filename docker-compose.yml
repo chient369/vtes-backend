@@ -20,6 +20,7 @@ services:
     restart: always
     depends_on:
       - mysql
+      - redis
     ports:
       - 8080:8080
     networks:
