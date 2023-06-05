@@ -72,8 +72,7 @@ public class UserController {
 	@PostMapping("/emails")
 	public ResponseEntity<?> sendResetPasswordViaEmail(@RequestBody EmailPayload passwordResetEmailRequest) throws VtesException {
 		userService.sendResetPasswordViaEmail(passwordResetEmailRequest);
-		
-		
+
 		return ResponseEntity.ok()
 				.body(ResponseData.builder()
 						.type(ResponseType.INFO)
@@ -98,7 +97,7 @@ public class UserController {
 
 	@PutMapping()
 	public ResponseEntity<?> updateUser(@Valid @RequestBody UpdateUserPayload updateInfoRequest) throws VtesException {
-	 userService.updateUser(updateInfoRequest, getUserDetails());
+		userService.updateUser(updateInfoRequest, getUserDetails());
 		return ResponseEntity.ok()
 							.body(ResponseData.builder()
 							.type(ResponseType.INFO)

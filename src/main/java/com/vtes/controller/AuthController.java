@@ -33,9 +33,11 @@ import com.vtes.security.service.RefreshTokenService;
 import com.vtes.security.service.UserDetailsImpl;
 import com.vtes.service.UserServiceImpl;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+import lombok.extern.slf4j.Slf4j;
+
 @RestController
 @RequestMapping("/api/v1/auth")
+@Slf4j
 public class AuthController {
 	@Autowired
 	private AuthenticationManager authenticationManager;
@@ -83,6 +85,7 @@ public class AuthController {
 		} else {
 			cookieUtils.createAccessTokenCookie(httpServletResponse, jwt);
 		}
+		log.info("{} was logined", userDetails.getEmail());
 
 		return ResponseEntity.ok().body(ResponseData.builder()
 													.code("")
@@ -106,6 +109,14 @@ public class AuthController {
 	@GetMapping("/refreshToken")
 	public ResponseEntity<?> refreshtoken(HttpServletRequest request, HttpServletResponse httpServletResponse) {
 		String requestRefreshToken = cookieUtils.getRefreshTokenFromCookie(request);
+		if(requestRefreshToken == null) {
+			return ResponseEntity.ok()
+					.body(ResponseData.builder()
+							.type(ResponseType.WARINING).code("")
+							.message("refresh token is null")
+							.build());
+		}
+		log.info("{} of access token was re-create");
 		return refreshTokenService.findByToken(requestRefreshToken).map(refreshTokenService::verifyExpiration)
 				.map(RefreshToken::getUser).map(user -> {
 					String token = jwtUtils.generateTokenFromEmail(user.getEmail());

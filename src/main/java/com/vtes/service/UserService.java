@@ -7,6 +7,10 @@ import com.vtes.payload.ResetPasswordPayload;
 import com.vtes.payload.UpdateUserPayload;
 import com.vtes.security.service.UserDetailsImpl;
 
+/*
+ * @Author : cong.nguyenthanh
+ * Date : 2023/05/21
+ * */
 public interface UserService {
 	User getUser(String email);
 
