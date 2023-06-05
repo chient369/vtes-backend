@@ -1,4 +1,4 @@
-package com.vtes.payload.request;
+package com.vtes.payload;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
@@ -11,7 +11,7 @@ import com.vtes.model.CommuterPassDTO;
 import lombok.Data;
 
 @Data
-public class UpdateInfoRequest {
+public class UpdateUserPayload {
 	@NotBlank
 	@Size(min = 4, max = 64)
 	private String fullName;

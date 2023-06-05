@@ -1,21 +1,24 @@
 package com.vtes.service;
 
-import org.springframework.http.ResponseEntity;
-
 import com.vtes.entity.User;
-import com.vtes.payload.request.PasswordResetEmailRequest;
-import com.vtes.payload.request.PasswordResetRequest;
-import com.vtes.payload.request.UpdateInfoRequest;
-import com.vtes.security.services.UserDetailsImpl;
+import com.vtes.exception.VtesException;
+import com.vtes.payload.EmailPayload;
+import com.vtes.payload.ResetPasswordPayload;
+import com.vtes.payload.UpdateUserPayload;
+import com.vtes.security.service.UserDetailsImpl;
 
+/*
+ * @Author : cong.nguyenthanh
+ * Date : 2023/05/21
+ * */
 public interface UserService {
 	User getUser(String email);
 
-	ResponseEntity<?> activeUser(String token);
+	void activeUser(String token) throws VtesException;
 
-	ResponseEntity<?> updateUser(UpdateInfoRequest updateInfoRequest, UserDetailsImpl userDetailsImpl);
+	User updateUser(UpdateUserPayload updateInfoRequest, UserDetailsImpl userDetailsImpl) throws VtesException;
 
-	ResponseEntity<?> sendResetPasswordViaEmail(PasswordResetEmailRequest passwordResetEmailRequest);
+	void sendResetPasswordViaEmail(EmailPayload passwordResetEmailRequest) throws VtesException;
 
-	ResponseEntity<?> resetPassword(PasswordResetRequest passwordResetRequest);
+	void resetPassword(ResetPasswordPayload passwordResetRequest) throws VtesException;
 }

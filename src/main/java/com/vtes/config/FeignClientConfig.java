@@ -6,16 +6,17 @@ import java.io.InputStream;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.amazonaws.services.chimesdkmeetings.model.NotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vtes.exception.AccessKeyExpiredException;
-import com.vtes.exception.BadRequestException;
+import com.vtes.exception.NotFoundException;
+import com.vtes.exception.VtesException;
 import com.vtes.model.navitime.NavitimeExceptionMessage;
 
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import feign.Response;
 import feign.codec.ErrorDecoder;
+import lombok.extern.slf4j.Slf4j;
 
 /*
  * @Author: chien.tranvan
@@ -24,6 +25,7 @@ import feign.codec.ErrorDecoder;
  */
 
 @Configuration
+@Slf4j
 public class FeignClientConfig {
 
 	private final RapidAPIAccessKeyManager accessKeyManager;
@@ -82,12 +84,14 @@ public class FeignClientConfig {
 			
 			if (response.status() == TOO_MANY_REQUEST) {
 				String currentKey = accessKeyManager.getCurrentAccessKey();
+				String keyIndex = accessKeyManager.getKeyIndex();
+				
 				accessKeyManager.rotateAccesskey();
+				log.info("Current access key index = {} , key = {}",keyIndex,currentKey);
 				return new AccessKeyExpiredException(currentKey);
 			}
 			if(message.getStatus_code() == 500) {
-				System.err.println(message.getMessage());
-				return new BadRequestException(message.getMessage());
+				return new VtesException("API_ER04","This specifed routes not found");
 			}
 			if(message.getStatus_code() == 404) {
 				return new NotFoundException(message.getMessage());

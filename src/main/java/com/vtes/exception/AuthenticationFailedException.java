@@ -1,26 +1,14 @@
 package com.vtes.exception;
 
-public class AuthenticationFailedException extends Exception{
-	
-	/**
-	 * 
-	 */
+public class AuthenticationFailedException extends VtesException{
 	private static final long serialVersionUID = 1L;
-	private String msg;
 	
-
-	public AuthenticationFailedException(String msg) {
-		super(msg);
-		this.msg = msg;
+	public AuthenticationFailedException(String code, String message) {
+		super(code, message);
 	}
+	public AuthenticationFailedException(String email) {
+		super("AUTH_FAILED",String.format("Authenticated failed with email : %s", email));
 
-	public String getMsg() {
-		return msg;
-	}
-
-	public void setMsg(String msg) {
-		this.msg = msg;
 	}
 	
-
 }

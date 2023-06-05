@@ -1,13 +1,12 @@
-package com.vtes.payload.request;
+package com.vtes.payload;
 
 import javax.validation.constraints.*;
-
 import lombok.Data;
 
 @Data
-public class SignupRequest {
+public class RegisterPayload {
 	@NotBlank
-	@Size(min = 8, max = 128)
+	@Size(min = 6, max = 128)
 	private String fullName;
 
 	@NotNull

@@ -16,11 +16,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vtes.exception.NotFoundCommuterPassValid;
+import com.vtes.exception.NavitimeConnectException;
+import com.vtes.exception.NotFoundException;
+import com.vtes.exception.VtesException;
 import com.vtes.model.navitime.CommuterPassRoute;
 import com.vtes.model.navitime.Link;
 import com.vtes.model.navitime.Route;
@@ -46,8 +47,11 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 	private static final String MOVE = "move";
 	private static final Integer RESULT_LIMIT = 100;
 	private static final String PREFIX_KEY = "stations:";
-	private static final Integer KEY_DURATION = 7;
+	private static final Integer KEY_DURATION = 30;
 	private static final String FLIGHT = "domestic_flight";
+	
+	/*When the response station of data is null, it indicates a response of length */
+	private static final Integer NO_DATA_RESPONSE_OF_LEN = 75;
 
 	@Autowired
 	private TotalNaviApiConnect totalnavi;
@@ -61,7 +65,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 	@Autowired
 	private ObjectMapper objectMapper;
 
-	public List<Route> searchRoutes(Map<String, Object> params) {
+	public List<Route> searchRoutes(Map<String, Object> params) throws NavitimeConnectException {
 		List<Route> items = null;
 		SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
 		String formattedDateTime = sdf.format(new Date());
@@ -83,8 +87,8 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 			items = objectMapper.readValue(itemsNode.toString(), new TypeReference<List<Route>>() {
 			});
-		} catch (JsonProcessingException e) {
-			log.error("Has error when call 3rd API");
+		} catch (Exception e) {
+			throw new NavitimeConnectException("Has error when call 3rd API");
 		}
 
 		return items;
@@ -92,7 +96,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 	// Call the api to a 3rd party and filter out the points that are train stations
 	@Override
-	public List<Station> searchStationsByWord(String stationName) {
+	public List<Station> searchStationsByWord(String stationName) throws VtesException {
 
 		String jsonString = (String) redisTemplate.opsForValue().get(PREFIX_KEY + stationName);
 
@@ -103,6 +107,9 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 	}
 
+	/*
+	 * Get station details from navitime and restore to redis
+	 */
 	private String searchStationsFromNaviTime(String stationName) {
 		if (!keyRegexValidateToCallApi(stationName)) {
 			return null;
@@ -116,8 +123,11 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		if (responseEntity.getStatusCode() == HttpStatus.OK) {
 			String jsonString = responseEntity.getBody();
 
+			/*This block is validate key of length and restore data when resp of station detail is not null*/
 			if (keyRegexValidateToRestore(stationName)) {
-				restoreDataToRedis(stationName, jsonString);
+				if(jsonString.length() >  NO_DATA_RESPONSE_OF_LEN) {					
+					restoreDataToRedis(stationName, jsonString);
+				}
 			}
 			return jsonString;
 		}
@@ -125,11 +135,10 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		return null;
 	}
 
-	private List<Station> filterStations(String jsonString) {
+	private List<Station> filterStations(String jsonString) throws VtesException {
 		if (isNullObject(jsonString)) {
 			return new ArrayList<>();
 		}
-		;
 		try {
 			JsonNode node = objectMapper.readTree(jsonString);
 			JsonNode itemsNode = node.get(ITEMS);
@@ -138,22 +147,20 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 			return stations.stream().filter(s -> s.getTypes().contains(STATION))
 					.peek(s -> s.setName(s.getName() + STATION_JA)).collect(Collectors.toList());
-		} catch (JsonProcessingException e) {
-			log.debug("Error occurred while mapping to List<Station>");
+		} catch (Exception e) {
+			throw new VtesException("Error occurred while mapping to List<Station>");
 		}
 
-		return new ArrayList<>();
 	}
 
-	public List<CommuterPassRoute> searchCommuterPassDetail(Map<String, Object> params)
-			throws NotFoundCommuterPassValid {
+	public List<CommuterPassRoute> searchCommuterPassDetail(Map<String, Object> params) throws NotFoundException, NavitimeConnectException{
 		List<Route> routes = searchRoutes(params);
 		return convertCommuterPass(routes);
 
 	}
 
 	// Get route details and convert to a commuter pass used for next request
-	private List<CommuterPassRoute> convertCommuterPass(List<Route> routes) throws NotFoundCommuterPassValid {
+	private List<CommuterPassRoute> convertCommuterPass(List<Route> routes) throws NotFoundException{
 		List<CommuterPassRoute> cpDetails = new ArrayList<>();
 		for (Route route : routes) {
 			CommuterPassRoute cpRoute = new CommuterPassRoute();
@@ -172,7 +179,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 			}
 
 			if (cpLink.size() > 10) {
-				throw new NotFoundCommuterPassValid("Not found valid commuter pass");
+				throw new NotFoundException("APIAPI017_ER","Not found valid commuter pass");
 			}
 			cpRoute.setCommuterPassLink(cpLink);
 
@@ -183,19 +190,21 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 	}
 
 	private boolean keyRegexValidateToCallApi(String keyWord) {
-		String hiraganaRegex = "^[ぁ-ん]{4,}$";
-		String katakanaRegex = "^[ァ-ン]{4,}$";
-		String kanjiRegex = "^[一-龯]{2,}$";
-		return Pattern.matches(hiraganaRegex, keyWord) || Pattern.matches(katakanaRegex, keyWord)
-				|| Pattern.matches(kanjiRegex, keyWord);
+		String hiraganaRegex = "^[ぁ-ん]{3,}$";
+		String katakanaRegex = "^[ァ-ン]{3,}$";
+		String kanjiKanaRegex = "^(?=.*[一-龯ァ-ヶ])[一-龯ァ-ヶ]{2,}+$";
+		return Pattern.matches(hiraganaRegex, keyWord)
+				|| Pattern.matches(katakanaRegex, keyWord)
+				|| Pattern.matches(kanjiKanaRegex, keyWord);
 	}
 
 	private boolean keyRegexValidateToRestore(String keyWord) {
-		String hiraganaRegex = "^[ぁ-ん]{4}$";
-		String katakanaRegex = "^[ァ-ン]{4}$";
-		String kanjiRegex = "^[一-龯]{2}$";
+		String hiraganaRegex = "^[ぁ-ん]{3}$";
+		String katakanaRegex = "^[ァ-ン]{3}$";
+		String kanjiRegex = "^(?=.*[一-龯ァ-ヶ])[一-龯ァ-ヶ]{2}+$";
 
-		return Pattern.matches(hiraganaRegex, keyWord) || Pattern.matches(katakanaRegex, keyWord)
+		return Pattern.matches(hiraganaRegex, keyWord) 
+				|| Pattern.matches(katakanaRegex, keyWord)
 				|| Pattern.matches(kanjiRegex, keyWord);
 	}
 

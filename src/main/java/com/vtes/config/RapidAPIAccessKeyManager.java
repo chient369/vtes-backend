@@ -27,4 +27,7 @@ public class RapidAPIAccessKeyManager {
 	
 		keyIndex = (keyIndex + 1) % accessKeys.size();
 	}
+	public String getKeyIndex() {
+		return String.format("%d/%d", keyIndex,accessKeys.size());
+	}
 }

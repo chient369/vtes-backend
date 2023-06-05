@@ -1,6 +1,6 @@
 package com.vtes.security;
 
-import java.util.Arrays;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,12 +8,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-//import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-//import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-//import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,7 +22,7 @@ import org.springframework.web.filter.CorsFilter;
 
 import com.vtes.security.jwt.AuthEntryPointJwt;
 import com.vtes.security.jwt.AuthTokenFilter;
-import com.vtes.security.services.UserDetailsServiceImpl;
+import com.vtes.security.service.UserDetailsServiceImpl;
 
 @Configuration
 @EnableGlobalMethodSecurity(prePostEnabled = true)
@@ -36,8 +33,8 @@ public class WebSecurityConfig {
 	@Autowired
 	private AuthEntryPointJwt unauthorizedHandler;
 
-	@Value("${vtes.cros.url}")
-	private String crosUrl;
+	@Value("#{'${vtes.cros.url}'.split(',')}")
+	private List<String> crosUrls;
 
 	@Bean
 	public AuthTokenFilter authenticationJwtTokenFilter() {
@@ -82,11 +79,11 @@ public class WebSecurityConfig {
 	@Bean
 	public CorsFilter corsFilter() {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(Arrays.asList(crosUrl));
+		config.setAllowedOrigins(crosUrls);
 		config.setAllowCredentials(true);
 		config.addAllowedMethod("*");
 		config.addAllowedHeader("*");
-		config.addExposedHeader("Set-Cookie");
+		config.addExposedHeader("*");
 		UrlBasedCorsConfigurationSource configSource = new UrlBasedCorsConfigurationSource();
 		configSource.registerCorsConfiguration("/**", config);
 		return new CorsFilter(configSource);

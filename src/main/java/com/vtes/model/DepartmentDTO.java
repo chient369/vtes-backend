@@ -1,4 +1,4 @@
-package com.vtes.payload.response;
+package com.vtes.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonPropertyOrder("departmentId")
-public class DepartmentResponse {
+public class DepartmentDTO {
 	@JsonProperty("departmentId")
-	private int id;
+	private Integer id;
 
 	private String departmentName;
 }

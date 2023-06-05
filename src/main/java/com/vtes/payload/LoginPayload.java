@@ -1,4 +1,4 @@
-package com.vtes.payload.request;
+package com.vtes.payload;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
@@ -9,7 +9,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class LoginRequest {
+public class LoginPayload {
 	@NotBlank
 	@Size(min = 16, max = 128)
 	@Pattern(regexp = ".+@vti\\.com\\.vn$")
