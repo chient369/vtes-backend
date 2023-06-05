@@ -28,7 +28,6 @@ public class ApiExceptionController {
 	@ExceptionHandler(VtesException.class)
 	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
 	public ResponseData badRequestResponse(VtesException ex) {
-		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code(ex.getCode()== null ? "":ex.getCode())
 				.message(ex.getMessage())
@@ -63,6 +62,7 @@ public class ApiExceptionController {
 	@ExceptionHandler(AuthenticationFailedException.class)
 	@ResponseStatus(value = HttpStatus.UNAUTHORIZED)
 	public ResponseData authenFailedException(AuthenticationFailedException ex) {
+		log.info(ex.getMessage());
 		return ResponseData.builder()
 				.code(ex.getCode())
 				.message(ex.getMessage())
@@ -140,7 +140,6 @@ public class ApiExceptionController {
 	@ExceptionHandler(MaxUploadSizeExceededException.class)
 	@ResponseStatus(value = HttpStatus.PAYLOAD_TOO_LARGE)
 	public ResponseData maxUploadSizeExceoption(Exception ex) {
-		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("API006_ER")
 				.message("This file size is too large")

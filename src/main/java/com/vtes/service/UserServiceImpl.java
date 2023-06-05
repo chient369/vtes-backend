@@ -29,6 +29,10 @@ import com.vtes.security.service.UserDetailsImpl;
 
 import lombok.extern.slf4j.Slf4j;
 
+/*
+ * @Author : cong.nguyenthanh
+ * Date : 2023/05/21
+ * */
 @Service
 @Slf4j
 public class UserServiceImpl implements UserService {
@@ -94,6 +98,7 @@ public class UserServiceImpl implements UserService {
 		userDb.setDeleteFlag(false);
 		userDb.setDepartment(department);
 		User savedUser = userRepository.save(userDb);
+		log.info("Not active account {} has beean re-registered",savedUser.getEmail());
 		
 		return savedUser;
 	}
@@ -110,6 +115,7 @@ public class UserServiceImpl implements UserService {
 		user.setDeleteFlag(false);
 		User savedUser = userRepository.save(user);
 
+		log.info("New account {} has been registered",savedUser.getEmail());
 		return savedUser;
 	}
 	
@@ -144,7 +150,7 @@ public class UserServiceImpl implements UserService {
 	public User updateUser(@Valid UpdateUserPayload updateInfoRequest, UserDetailsImpl userDetailsImpl) throws VtesException {
 		User user = getUserByEmail(userDetailsImpl.getEmail());
 		if (!departmentExists(updateInfoRequest.getDepartmentId())) {
-			log.debug("Bad request with department ID {}", updateInfoRequest.getDepartmentId());
+			log.info("Bad request with department ID {}", updateInfoRequest.getDepartmentId());
 			throw new VtesException("API_ER02","Invalid parameter");
 		}
 
@@ -207,6 +213,7 @@ public class UserServiceImpl implements UserService {
 			commuterPass.setViaDetail(viaDetail);
 			commuterPass.setUser(new User(userId));
 			user.setCommuterPass(commuterPass);
+			log.info("{} of commuter pass has been updated",user.getEmail());
 		}
 	}
 
