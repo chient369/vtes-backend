@@ -47,8 +47,11 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 	private static final String MOVE = "move";
 	private static final Integer RESULT_LIMIT = 100;
 	private static final String PREFIX_KEY = "stations:";
-	private static final Integer KEY_DURATION = 7;
+	private static final Integer KEY_DURATION = 30;
 	private static final String FLIGHT = "domestic_flight";
+	
+	/*When the response station of data is null, it indicates a response of length */
+	private static final Integer NO_DATA_RESPONSE_OF_LEN = 75;
 
 	@Autowired
 	private TotalNaviApiConnect totalnavi;
@@ -104,6 +107,9 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 	}
 
+	/*
+	 * Get station details from navitime and restore to redis
+	 */
 	private String searchStationsFromNaviTime(String stationName) {
 		if (!keyRegexValidateToCallApi(stationName)) {
 			return null;
@@ -117,8 +123,11 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		if (responseEntity.getStatusCode() == HttpStatus.OK) {
 			String jsonString = responseEntity.getBody();
 
+			/*This block is validate key of length and restore data when resp of station detail is not null*/
 			if (keyRegexValidateToRestore(stationName)) {
-				restoreDataToRedis(stationName, jsonString);
+				if(jsonString.length() >  NO_DATA_RESPONSE_OF_LEN) {					
+					restoreDataToRedis(stationName, jsonString);
+				}
 			}
 			return jsonString;
 		}
@@ -181,19 +190,21 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 	}
 
 	private boolean keyRegexValidateToCallApi(String keyWord) {
-		String hiraganaRegex = "^[ぁ-ん]{4,}$";
-		String katakanaRegex = "^[ァ-ン]{4,}$";
-		String kanjiRegex = "^[一-龯]{2,}$";
-		return Pattern.matches(hiraganaRegex, keyWord) || Pattern.matches(katakanaRegex, keyWord)
-				|| Pattern.matches(kanjiRegex, keyWord);
+		String hiraganaRegex = "^[ぁ-ん]{3,}$";
+		String katakanaRegex = "^[ァ-ン]{3,}$";
+		String kanjiKanaRegex = "^(?=.*[一-龯ァ-ヶ])[一-龯ァ-ヶ]{2,}+$";
+		return Pattern.matches(hiraganaRegex, keyWord)
+				|| Pattern.matches(katakanaRegex, keyWord)
+				|| Pattern.matches(kanjiKanaRegex, keyWord);
 	}
 
 	private boolean keyRegexValidateToRestore(String keyWord) {
-		String hiraganaRegex = "^[ぁ-ん]{4}$";
-		String katakanaRegex = "^[ァ-ン]{4}$";
-		String kanjiRegex = "^[一-龯]{2}$";
+		String hiraganaRegex = "^[ぁ-ん]{3}$";
+		String katakanaRegex = "^[ァ-ン]{3}$";
+		String kanjiRegex = "^(?=.*[一-龯ァ-ヶ])[一-龯ァ-ヶ]{2}+$";
 
-		return Pattern.matches(hiraganaRegex, keyWord) || Pattern.matches(katakanaRegex, keyWord)
+		return Pattern.matches(hiraganaRegex, keyWord) 
+				|| Pattern.matches(katakanaRegex, keyWord)
 				|| Pattern.matches(kanjiRegex, keyWord);
 	}
 
