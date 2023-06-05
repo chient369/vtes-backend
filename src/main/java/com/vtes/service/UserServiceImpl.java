@@ -123,6 +123,7 @@ public class UserServiceImpl implements UserService {
 	public void activeUser(String token) throws AuthenticationFailedException {
 	
 		if (!isTokenActiveUserExists(token)) {
+			log.info("Verify code incorrect : {}",token);
 			throw new AuthenticationFailedException("API005_ER","Verify code incorrect");
 		}
 
@@ -228,7 +229,7 @@ public class UserServiceImpl implements UserService {
 	public void sendResetPasswordViaEmail(EmailPayload payload) throws VtesException {
 
 		if (!userRepository.existsByEmail(payload.getEmail())) {
-			throw new NotFoundException("API003_ER","This entered email does not exist");			
+			throw new NotFoundException("API003_ER","Email"+payload.getEmail()+" does not exist");			
 
 		}
  
