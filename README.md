@@ -52,13 +52,15 @@ VTESバックエンドシステムは、Java言語で書かれており、ユー
 - ‘POST api/v1/auth/register’: 新規登録-アカウントを作成する
 - ‘GET api/v1/auth/logout’: システムからログアウトする
 - ‘POST api/v1/auth/refreshToken’: アクセストークンを更新する
-- ‘POST api/v1/users: ユーザー情報を更新する
+- ‘PUT api/v1/users: ユーザー情報を更新する
+- ‘POST api/v1/emails: パスワードを忘れたユーザーはメールアドレスを入力して送信する
 - ‘POST api/v1/users/reset-password’: 新しいパスワードを設定する
 - ‘GET api/v1/stations’: 駅情報を検索する
 - ‘GET api/v1/routes’: チケット価格情報およびルート情報を検索する
 - ‘POST api/v1/fares’: 入力したチケット情報をサーバーにアップロードする
 - ‘DELETE api/v1/fares/{id}’: 入力したチケット情報を削除する
 - ‘GET api/v1/users/files’: エクスポート済みのファイル情報を取得する
+- ‘POST api/v1/files’: エクスポート済みのファイル情報をサーバーに送信する
 - ‘GET api/v1/users’: 現在のユーザー情報を取得する
 - ‘GET api/v1/users/active’: アカウントをアクティブにする
 - ‘GET api/v1/departments’: 会社内の部署情報を取得する
