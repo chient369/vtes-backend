@@ -88,14 +88,14 @@ public class ApiExceptionController {
 		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("API_ER02")
-				.message(ex.getMessage())
+				.message("Invalid parameter")
 				.type(ResponseType.ERROR).build();
 
 	}
 
 	@ExceptionHandler(ParameterInvalidException.class)
 	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
-	public ResponseData invalidParamExResponse(Exception ex) {
+	public ResponseData invalidParamExResponse(ParameterInvalidException ex) {
 		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("API_ER02")

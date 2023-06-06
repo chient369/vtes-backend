@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vtes.exception.AccessKeyExpiredException;
 import com.vtes.exception.NotFoundException;
+import com.vtes.exception.ParameterInvalidException;
 import com.vtes.exception.VtesException;
 import com.vtes.model.navitime.NavitimeExceptionMessage;
 
@@ -95,6 +96,9 @@ public class FeignClientConfig {
 			}
 			if(message.getStatus_code() == 404) {
 				return new NotFoundException(message.getMessage());
+			}
+			if(message.getStatus_code() == 400) {
+				return new ParameterInvalidException("Bad Request");
 			}
 
 			 return errorDecoder.decode(methodKey, response);
