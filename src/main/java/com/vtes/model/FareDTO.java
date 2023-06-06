@@ -1,20 +1,21 @@
 package com.vtes.model;
 
 import java.util.Date;
+
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 public class FareDTO {
 
 	@JsonProperty("recordId")
@@ -50,6 +51,12 @@ public class FareDTO {
 	@NotNull
 	@JsonFormat(pattern = "yyyy/MM/dd")
 	private Date visitDate;
+	
+	@NotNull
+	private Date createDate = new Date();
+	
+	@NotNull
+	private Date updateDate = new Date();
 	
 	@NotNull
 	@JsonIgnore

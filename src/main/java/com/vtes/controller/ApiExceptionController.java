@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+import com.vtes.exception.AccessKeyExpiredException;
 import com.vtes.exception.AuthenticationFailedException;
 import com.vtes.exception.NotFoundException;
 import com.vtes.exception.ParameterInvalidException;
@@ -30,6 +31,16 @@ public class ApiExceptionController {
 	public ResponseData badRequestResponse(VtesException ex) {
 		return ResponseData.builder()
 				.code(ex.getCode()== null ? "":ex.getCode())
+				.message(ex.getMessage())
+				.type(ResponseType.ERROR)
+				.build();
+
+	}
+	@ExceptionHandler(AccessKeyExpiredException.class)
+	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
+	public ResponseData accessKeyExpired(AccessKeyExpiredException ex) {
+		return ResponseData.builder()
+				.code("")
 				.message(ex.getMessage())
 				.type(ResponseType.ERROR)
 				.build();
@@ -88,14 +99,14 @@ public class ApiExceptionController {
 		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("API_ER02")
-				.message(ex.getMessage())
+				.message("Invalid parameter")
 				.type(ResponseType.ERROR).build();
 
 	}
 
 	@ExceptionHandler(ParameterInvalidException.class)
 	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
-	public ResponseData invalidParamExResponse(Exception ex) {
+	public ResponseData invalidParamExResponse(ParameterInvalidException ex) {
 		log.debug("{}",ex.getMessage());
 		return ResponseData.builder()
 				.code("API_ER02")

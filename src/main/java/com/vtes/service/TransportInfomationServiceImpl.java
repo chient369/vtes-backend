@@ -179,7 +179,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 			}
 
 			if (cpLink.size() > 10) {
-				throw new NotFoundException("APIAPI017_ER","Not found valid commuter pass");
+				throw new NotFoundException("API017_ER","Not found valid commuter pass");
 			}
 			cpRoute.setCommuterPassLink(cpLink);
 
