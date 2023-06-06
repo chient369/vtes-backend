@@ -17,6 +17,7 @@ public class LoginPayload {
 
 	@NotBlank
 	@Size(min = 8, max = 64)
+	@Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\W).*$")
 	private String password;
 
 	private boolean remember = false;
