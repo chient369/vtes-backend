@@ -15,7 +15,7 @@ import lombok.Data;
 public class UpdateUserPayload {
 	@NotBlank
 	@Size(min = 4, max = 64)
-	@Pattern(regexp = "[A-Z]")
+	@Pattern(regexp = "[A-Z ]+")
 	private String fullName;
 
 	@Size(max = 64)

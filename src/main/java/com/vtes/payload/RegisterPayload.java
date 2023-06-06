@@ -7,7 +7,7 @@ import lombok.Data;
 public class RegisterPayload {
 	@NotBlank
 	@Size(min = 6, max = 128)
-	@Pattern(regexp = "[A-Z]")
+	@Pattern(regexp = "[A-Z ]+")
 	private String fullName;
 
 	@NotNull

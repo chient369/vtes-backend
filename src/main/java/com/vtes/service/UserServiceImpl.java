@@ -205,7 +205,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	private void updateCommuterPass(User user, Integer userId, CommuterPassDTO commuterPassDTO) {
-		if (commuterPassDTO.getViaDetails() != null) {
+		if (commuterPassDTO != null &&commuterPassDTO.getViaDetails() != null) {
 			String viaDetail = commuterPassDTO.getViaDetails().toString();
 
 			CommuterPass commuterPass = commuterPassRepo.findByUserId(userId).orElse(new CommuterPass());
