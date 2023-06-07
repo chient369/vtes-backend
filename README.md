@@ -1,92 +1,129 @@
-# vtes-backend
+### 概要
 
+VTESバックエンドシステムは、Java言語で書かれており、ユーザーが日付別のチケットの情報を検索し、Excelファイルでチケットの情報をエクスポートすることを目的としています。
 
+- 交通情報ソース：[Navitime Japan株式会社](https://api-sdk.navitime.co.jp/api/specs/)
+- 接続方法：中間者の[RapidAPI](https://rapidapi.com/search/navitime)を介して接続する
+- 使用中のエンドポイント:
+- NAVITIME Route（totalnavi）：列車のチケット価格情報を取得する
+- NAVITIME Transport：場所や駅の情報を取得する
 
-## Getting started
+フレームワーク：Springフレームワーク
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+ツール：
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- Docker：MySQLサーバー、Redisサーバー、およびアプリケーションを構成および初期化するために使用されます。
+    - バージョン：23.0.5
+- Redis：呼び出されたすべての駅の情報をキャッシュサーバーに保存するために使用されます。
+    - バージョン：7.0
+    - 設定：メモリ500 MB
+    - 最大メモリポリシー：allkeys-lfu
+    - 保存期間：30日
+- Mysql：データベースサーバ
+    - バージョン：8.0.33
 
-## Add your files
+### ライブラリ：
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+- Feign（Spring Cloud）-サードパーティAPIに接続してチケット情報を取得するためのもの
+- Java Mail sender-ユーザーに情報を送信するためのメールサーバーを作成するためのもの
+- AWS-S3-SDK：Amazon S3に接続し、アップロード、ファイルのダウンロードを実行するためのもの
+- Data JPA：DBへの迅速な接続とデータの要求を容易にするためのもの
+- Spring security：JWTを使用してユーザーのログインセッションを保護するためのもの
+- Jackson：オブジェクトからJSONデータに変換するためのもの
+
+### インストール手順：
+
+1. Dockerをインストールしてください。
+- Windowsの場合：[Install Docker Desktop on Windows | Docker Documentation](https://docs.docker.com/desktop/install/windows-install/)
+- Linuxの場合：[Install Docker Engine on Ubuntu | Docker Documentation](https://docs.docker.com/engine/install/ubuntu/)
+1. GitLab VTIからプロジェクトをクローンします。
+    
+    `git clone https://git.vti.com.vn/chien.tranvan/vtes-backend.git`
+    
+2. vtes-backendフォルダに移動して、コマンドラインを開き、次を実行します。
+- `docker compose up`
+
+### 使用手順：
+
+1. リンクにアクセスしてください：http://localhost:8080
+2. ユーザーアカウントに登録またはログインしてください。
+3. 検索してファイルをエクスポートしてください。
+
+### 使用されるエンドポイント：
+
+- ‘POST api/v1/auth/login’: システムにログインする
+- ‘POST api/v1/auth/register’: 新規登録-アカウントを作成する
+- ‘GET api/v1/auth/logout’: システムからログアウトする
+- ‘POST api/v1/auth/refreshToken’: アクセストークンを更新する
+- ‘PUT api/v1/users: ユーザー情報を更新する
+- ‘POST api/v1/emails: パスワードを忘れたユーザーはメールアドレスを入力して送信する
+- ‘POST api/v1/users/reset-password’: 新しいパスワードを設定する
+- ‘GET api/v1/stations’: 駅情報を検索する
+- ‘GET api/v1/routes’: チケット価格情報およびルート情報を検索する
+- ‘POST api/v1/fares’: 入力したチケット情報をサーバーにアップロードする
+- ‘DELETE api/v1/fares/{id}’: 入力したチケット情報を削除する
+- ‘GET api/v1/users/files’: エクスポート済みのファイル情報を取得する
+- ‘POST api/v1/files’: エクスポート済みのファイル情報をサーバーに送信する
+- ‘GET api/v1/users’: 現在のユーザー情報を取得する
+- ‘GET api/v1/users/active’: アカウントをアクティブにする
+- ‘GET api/v1/departments’: 会社内の部署情報を取得する
+- ‘GET api/v1/cp-routes’: 月額チケット情報を取得する
+- ‘GET api/v1/files/{fileId}’: エクスポートしたファイルをダウンロードする
+
+### ディレクトリ構造
 
 ```
-cd existing_repo
-git remote add origin https://git.vti.com.vn/chien.tranvan/vtes-backend.git
-git branch -M main
-git push -uf origin main
+├─src
+│  └─main
+│      ├─java
+│      │  └─com
+│      │      └─vtes
+│      │          ├─config
+│      │          ├─controller
+│      │          ├─entity
+│      │          ├─exception
+│      │          ├─model
+│      │          │  └─navitime
+│      │          ├─payload
+│      │          ├─repository
+│      │          ├─security
+│      │          │  ├─jwt
+│      │          │  └─service
+│      │          └─service
+│      └─resources
+├─Dockerfile
+├─docker-compose.yml
+├─redis.conf
+└─vtesdb
 ```
+- src/main/java: アプリケーションの主要なクラスが含まれています。
+    - /config: アプリケーションの設定ファイルが含まれています。
+    - /controller: コントローラーが含まれています。リクエストを受信し、クライアントにデータを返します。
+    - /entity: データベースとデータのやり取りをするエンティティオブジェクトが含まれています。
+    - /exception: アプリケーション内で発生した例外エラークラスが含まれています。
+    - /model: サービス層とリポジトリ層の間で交換するためのDTO（Data Transfer Object）が含まれています。
+        - /navitime:
+            - Navitimeからのレスポンスで返されるデータオブジェクトが含まれています。
+            - 目的：Javaオブジェクトに変換して処理し、クライアントに返します。
+    - /payload: ブラウザーとサーバー間で交換されるrリクエストのデータが含まれています。
+    - /repository: データベースとデータのやり取りをするためのクラスが含まれています。
+    - /security: アプリケーションのセキュリティを設定します。
+        - /jwt: JWT（Json Web Token）の使用設定を含むクラスが含まれています。
+        - /service: セキュリティロジックを処理するためのクラスが含まれています。
+    - /service: アプリケーションのロジックを処理するためのクラスが含まれています。
+- src/main/resource: アプリケーションの環境設定ファイルが含まれています。
+- Dockerfile: Docker内の仮想環境を作成し、アプリケーションをビルドするための手順を定義します。
+- docker-compose.yml: システムに必要な環境を定義し、作成するための設定を定義します。Redisサーバー、MySQLサーバー、Vtes-Applicationを含みます。
+- redis.config: Redisサーバーの設定ファイル
+- /vtesdb: Docker内でデータベースを初期化するためのSQLファイルが含まれています。
 
-## Integrate with your tools
+### 作成者
 
-- [ ] [Set up project integrations](https://git.vti.com.vn/chien.tranvan/vtes-backend/-/settings/integrations)
+- Tran Van Chien (VJP)
+- メール：[chien.tranvan@vti.com.vn](mailto:chien.tranvan@vti.com.vn)
+- Nguyen Thanh Cong (VJP)
+- メール：[cong.nguyenthanh2@vti.com.vn](mailto:cong.nguyenthanh2@vti.com.vn)
 
-## Collaborate with your team
+### お問い合わせ：
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+ご質問、提案、またはフィードバックがある場合は、以下のメールアドレスにお問い合わせください：[chien.tranvan@vti.com.vn](mailto:chien.tranvan@vti.com.vn)
