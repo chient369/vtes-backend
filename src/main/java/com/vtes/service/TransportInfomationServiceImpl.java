@@ -49,6 +49,8 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 	private static final String PREFIX_KEY = "stations:";
 	private static final Integer KEY_DURATION = 30;
 	private static final String FLIGHT = "domestic_flight";
+	private static final String SUPER_EXPRESS = "superexpress_train";
+	private static final String ULTRA_EXPRESS = "ultraexpress_train";
 	
 	/*When the response station of data is null, it indicates a response of length */
 	private static final Integer NO_DATA_RESPONSE_OF_LEN = 75;
@@ -74,7 +76,7 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 		params.put("start_time", formattedDateTime);
 
 		// Filter routes use flight way
-		params.put("unuse", FLIGHT);
+		params.put("unuse", generateUnuseParams());
 		ResponseEntity<?> response = totalnavi.searchRoutes(params);
 		if (response.getStatusCodeValue() == 500) {
 			return new ArrayList<>();
@@ -215,6 +217,9 @@ public class TransportInfomationServiceImpl implements TransportInfomationServic
 
 	private boolean isNullObject(Object ob) {
 		return ob == null ? true : false;
+	}
+	private String generateUnuseParams() {
+		return FLIGHT+"."+ULTRA_EXPRESS+"."+SUPER_EXPRESS;
 	}
 
 }
