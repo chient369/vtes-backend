@@ -1,6 +1,6 @@
 package com.vtes.entity;
 
-import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 
 import javax.persistence.Column;
@@ -10,6 +10,8 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -22,6 +24,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Department {
+	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "ID")
@@ -31,11 +34,17 @@ public class Department {
 	private String departmentName;
 	
 	@OneToMany(mappedBy = "department")
+	@JsonIgnore
 	private List<User> user;
 	
 	@Column(name = "`CREATE_DT`")
-	private Instant createDt;
+	private Date createDt;
 
 	@Column(name = "`UPDATE_DT`") 
-	private Instant updateDt;
+	private Date updateDt;
+	
+	public Department(int departmentId) {
+		this.id = departmentId;
+	}
+
 }

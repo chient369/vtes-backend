@@ -1,11 +1,12 @@
 package com.vtes.service;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -36,13 +37,14 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 public class UserServiceImpl implements UserService {
+	private final Integer USER_CACHE_DURATION = 30;
 
 	@Autowired
 	private UserRepository userRepository;
 
 	@Autowired
 	private DepartmentRepository departmentRepository;
-	
+
 	@Autowired
 	private FareService fareService;
 
@@ -50,118 +52,95 @@ public class UserServiceImpl implements UserService {
 	private CommuterPassRepo commuterPassRepo;
 
 	@Autowired
-	private  PasswordEncoder encoder;
+	private PasswordEncoder encoder;
 
 	@Autowired
-	private  EmailService emailService;
+	private EmailService emailService;
+
+	@Autowired
+	private RedisTemplate<String, Object> redisTemplate;
 
 	@Autowired
 	private JwtUtils jwtUtils;
 
-	
 	public User saveUser(RegisterPayload payload) throws VtesException {
 		if (isActiveUserAccount(payload.getEmail())) {
-			log.info("{} is trying to register ",payload.getEmail());
+			log.info("{} is trying to register ", payload.getEmail());
 			throw new UserException("API002_ER", "This email has already been used");
 		}
 
 		if (departmentRepository.findById(payload.getDepartmentId()).isEmpty()) {
-			throw new VtesException("", "Department id "+payload.getDepartmentId()+" not found");
+			throw new VtesException("", "Department id " + payload.getDepartmentId() + " not found");
 		}
-		
-		User savedUser ;
 
-		if(userRepository.existsByEmail(payload.getEmail())) {
-			savedUser = saveUserWhenNotActive(payload);
-		}else {
-			savedUser = saveNewUser(payload);
+		if (isExistsUserOnCache(payload.getEmail())) {
+			log.info("{} is trying to register", payload.getEmail());
+			throw new UserException("API002_ER2", "Active email already sent to " + payload.getEmail());
 		}
-		
-		if(savedUser != null) {
-			emailService.sendRegistrationUserConfirm(payload.getEmail(), savedUser.getVerifyCode());
+
+		User preActiveUser = saveNewUser(payload);
+		System.out.println(preActiveUser);
+		if (preActiveUser != null) {
+			restoreRegisterUser(preActiveUser);
+			emailService.sendRegistrationUserConfirm(payload.getEmail(), preActiveUser.getVerifyCode());
 		}
-		return savedUser;
-		
-		
+		return preActiveUser;
 
 	}
-	
-	private User saveUserWhenNotActive(RegisterPayload payload) {
-		Department department = new Department();
-		department = departmentRepository.findById(payload.getDepartmentId()).get();
 
-		User userDb = userRepository.findByEmail(payload.getEmail()).get();
-		userDb.setStatus((short) 0);
-		String tokenActive = jwtUtils.generateTokenToActiveUser(payload.getEmail());
-		userDb.setVerifyCode(tokenActive);
-		userDb.setCreateDt(Instant.now());
-		userDb.setDeleteFlag(false);
-		userDb.setDepartment(department);
-		User savedUser = userRepository.save(userDb);
-		log.info("Not active account {} has beean re-registered",savedUser.getEmail());
-		
-		return savedUser;
+	private boolean isExistsUserOnCache(String email) {
+		return redisTemplate.hasKey(email);
 	}
+
 	private User saveNewUser(RegisterPayload payload) {
-		Department department = new Department();
-		department = departmentRepository.findById(payload.getDepartmentId()).get();
-
-		User user = new User(payload.getFullName(), payload.getEmail(),
-				encoder.encode(payload.getPassword()), department);
+		User user = new User(payload.getFullName(), payload.getEmail(), encoder.encode(payload.getPassword()),
+				new Department(payload.getDepartmentId()));
 		user.setStatus((short) 0);
 		String tokenActive = jwtUtils.generateTokenToActiveUser(payload.getEmail());
 		user.setVerifyCode(tokenActive);
-		user.setCreateDt(Instant.now());
 		user.setDeleteFlag(false);
-		User savedUser = userRepository.save(user);
 
-		log.info("New account {} has been registered",savedUser.getEmail());
-		return savedUser;
+		log.info("New account {} has been registered", user.getEmail());
+		log.info("{} of details has been restored to cache", user.getEmail());
+		return user;
 	}
-	
+
 	@Override
 	public void activeUser(String token) throws AuthenticationFailedException {
-	
-		if (!isTokenActiveUserExists(token)) {
-			log.info("Verify code incorrect : {}",token);
-			throw new AuthenticationFailedException("API005_ER","Verify code incorrect");
-		}
 
-		if (!jwtUtils.validateJwtToken(token)) {
-			Optional<User> user = userRepository.findByVerifyCode(token);
-			if(user.isPresent()) {
-				log.info("Active failed user id {} has deleted.",user.get().getId());
-				userRepository.deleteById(user.get().getId());
-			}
-			
+		if (!redisTemplate.hasKey(token)) {
 			log.info("Verify code has expired : {}", token);
-			throw new AuthenticationFailedException("API_ER01","Verify code has expired");
+			throw new AuthenticationFailedException("API_ER01", "Verify code has expired");
 		}
-
-		User user = userRepository.findByVerifyCode(token).get();
+		User user = (User) redisTemplate.opsForValue().get(token);
+		System.out.println(user);
+		user.setCreateDt(Instant.now());
 		user.setVerifyCode(null);
 		user.setStatus((short) 1);
 		userRepository.save(user);
+		clearCacheAfterActive(user, token);
 
 		log.info("User {} of account is active", user.getFullName());
 
 	}
 
 	@Override
-	public User updateUser(@Valid UpdateUserPayload updateInfoRequest, UserDetailsImpl userDetailsImpl) throws VtesException {
+	public User updateUser(@Valid UpdateUserPayload updateInfoRequest, UserDetailsImpl userDetailsImpl)
+			throws VtesException {
 		User user = getUserByEmail(userDetailsImpl.getEmail());
 		if (!departmentExists(updateInfoRequest.getDepartmentId())) {
 			log.info("Bad request with department ID {}", updateInfoRequest.getDepartmentId());
-			throw new VtesException("API_ER02","Invalid parameter");
+			throw new VtesException("API_ER02", "Invalid parameter");
 		}
 
 		Department department = getDepartmentById(updateInfoRequest.getDepartmentId());
 
 		if (updateInfoRequest.getNewPassword() != null) {
-			if (!isPasswordValid(updateInfoRequest.getOldPassword(), user.getPassword()) && updateInfoRequest.getOldPassword() != null) {
+			if (!isPasswordValid(updateInfoRequest.getOldPassword(), user.getPassword())
+					&& updateInfoRequest.getOldPassword() != null) {
 
 				log.info("{} of entered password not match", user.getFullName());
-				throw new VtesException("API004_ER","Old password is not match");
+				throw new VtesException("API004_ER", "Old password is not match");
 			}
 
 			updateUserPassword(user, updateInfoRequest.getNewPassword());
@@ -173,14 +152,10 @@ public class UserServiceImpl implements UserService {
 		user.setFullName(updateInfoRequest.getFullName());
 		user.setUpdateDt(Instant.now());
 		User updatedUser = userRepository.save(user);
-		
+
 		log.info("{} update successfully", user.getFullName());
 		return updatedUser;
-		
-	}
 
-	private boolean isTokenActiveUserExists(String token) {
-		return !userRepository.findByVerifyCode(token).isEmpty();
 	}
 
 	private User getUserByEmail(String email) {
@@ -205,7 +180,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	private void updateCommuterPass(User user, Integer userId, CommuterPassDTO commuterPassDTO) {
-		if (commuterPassDTO != null &&commuterPassDTO.getViaDetails() != null) {
+		if (commuterPassDTO != null && commuterPassDTO.getViaDetails() != null) {
 			String viaDetail = commuterPassDTO.getViaDetails().toString();
 
 			CommuterPass commuterPass = commuterPassRepo.findByUserId(userId).orElse(new CommuterPass());
@@ -214,7 +189,7 @@ public class UserServiceImpl implements UserService {
 			commuterPass.setViaDetail(viaDetail);
 			commuterPass.setUser(new User(userId));
 			user.setCommuterPass(commuterPass);
-			log.info("{} of commuter pass has been updated",user.getEmail());
+			log.info("{} of commuter pass has been updated", user.getEmail());
 		}
 	}
 
@@ -229,14 +204,14 @@ public class UserServiceImpl implements UserService {
 	public void sendResetPasswordViaEmail(EmailPayload payload) throws VtesException {
 
 		if (!userRepository.existsByEmail(payload.getEmail())) {
-			throw new NotFoundException("API003_ER","Email"+payload.getEmail()+" does not exist");			
+			throw new NotFoundException("API003_ER", "Email" + payload.getEmail() + " does not exist");
 
 		}
- 
+
 		User user = userRepository.findByEmail(payload.getEmail()).get();
 
 		if (user.getStatus() == 0) {
-			throw new UserException("API001_ER02","This account is not active yet");
+			throw new UserException("API001_ER02", "This account is not active yet");
 		}
 		String tokenToResetPassword = jwtUtils.generateTokenToResetPassword(user.getEmail());
 
@@ -254,20 +229,20 @@ public class UserServiceImpl implements UserService {
 
 		if (!isTokenResetPasswordExists(tokenResetPassword)) {
 			log.info("Verify code does not exist : {}", passwordResetRequest.getAuthToken());
-			throw new AuthenticationFailedException("API005_ER","Verify code incorrect");
+			throw new AuthenticationFailedException("API005_ER", "Verify code incorrect");
 
 		}
 
 		if (!jwtUtils.validateJwtToken(tokenResetPassword)) {
 			log.info("Verify code has expired : {}", passwordResetRequest.getAuthToken());
-			throw new AuthenticationFailedException("API_ER01","Verify code has expired");
+			throw new AuthenticationFailedException("API_ER01", "Verify code has expired");
 		}
 
 		User user = new User();
 		user = userRepository.findByVerifyCode(tokenResetPassword).get();
 
 		if (user.getStatus() == 0) {
-			throw new UserException("API001_ER02","This account is not active yet");
+			throw new UserException("API001_ER02", "This account is not active yet");
 		}
 
 		user.setPassword(encoder.encode(passwordResetRequest.getNewPassword()));
@@ -276,21 +251,30 @@ public class UserServiceImpl implements UserService {
 
 		log.info("{} reset password successfully!", user.getFullName());
 
-
 	}
 
 	private boolean isTokenResetPasswordExists(String token) {
 		return !userRepository.findByVerifyCode(token).isEmpty();
 
 	}
+
 	public boolean isActiveUserAccount(String email) {
 		return userRepository.findActiveUserByEmail(email) > 0;
 
 	}
 
 	public User findUserById(Integer userId) throws NotFoundException {
-	    return userRepository.findById(userId)
-	            .orElseThrow(() -> new NotFoundException("User not found: " + userId));
+		return userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found: " + userId));
+	}
+
+	private void restoreRegisterUser(User user) {
+		redisTemplate.opsForValue().set(user.getEmail(), null, Duration.ofMinutes(USER_CACHE_DURATION));
+		redisTemplate.opsForValue().set(user.getVerifyCode(), user, Duration.ofMinutes(USER_CACHE_DURATION));
+	}
+
+	private void clearCacheAfterActive(User user, String token) {
+		redisTemplate.delete(user.getEmail());
+		redisTemplate.delete(token);
 	}
 
 }
