@@ -1,6 +1,7 @@
 package com.vtes.controller;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -119,6 +120,16 @@ public class ApiExceptionController {
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
 	public ResponseData bodyRequestAgrgumentInvalid(Exception ex) {
+		return ResponseData.builder()
+				.code("API_ER03")
+				.message("Invalid request body of data")
+				.type(ResponseType.ERROR)
+				.build();
+
+	}
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	@ResponseStatus(value = HttpStatus.BAD_REQUEST)
+	public ResponseData binDataException(Exception ex) {
 		return ResponseData.builder()
 				.code("API_ER03")
 				.message("Invalid request body of data")
