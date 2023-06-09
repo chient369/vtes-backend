@@ -38,6 +38,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class UserServiceImpl implements UserService {
 	private final Integer USER_CACHE_DURATION = 30;
+	private final String RST_PWD_PREFIX = "RST_PWD:";
 
 	@Autowired
 	private UserRepository userRepository;
@@ -110,10 +111,9 @@ public class UserServiceImpl implements UserService {
 
 		if (!redisTemplate.hasKey(token)) {
 			log.info("Verify code has expired : {}", token);
-			throw new AuthenticationFailedException("API_ER01", "Verify code has expired");
+			throw new AuthenticationFailedException("API005_ER", "Verify code has expired");
 		}
 		User user = (User) redisTemplate.opsForValue().get(token);
-		System.out.println(user);
 		user.setCreateDt(Instant.now());
 		user.setVerifyCode(null);
 		user.setStatus((short) 1);
@@ -204,7 +204,7 @@ public class UserServiceImpl implements UserService {
 	public void sendResetPasswordViaEmail(EmailPayload payload) throws VtesException {
 
 		if (!userRepository.existsByEmail(payload.getEmail())) {
-			throw new NotFoundException("API003_ER", "Email" + payload.getEmail() + " does not exist");
+			throw new NotFoundException("API003_ER01", "Email: " + payload.getEmail() + " does not exist");
 
 		}
 
@@ -213,10 +213,13 @@ public class UserServiceImpl implements UserService {
 		if (user.getStatus() == 0) {
 			throw new UserException("API001_ER02", "This account is not active yet");
 		}
+		if (isSentResetPasswordMail(payload.getEmail())) {
+			throw new AuthenticationFailedException("API003_ER02", "Reset password link has been sent");
+		}
 		String tokenToResetPassword = jwtUtils.generateTokenToResetPassword(user.getEmail());
-
 		user.setVerifyCode(tokenToResetPassword);
 		userRepository.save(user);
+		restoreResetPassWait(payload.getEmail());
 
 		emailService.sendResetPasswordViaEmail(payload.getEmail(), user.getVerifyCode());
 
@@ -227,34 +230,25 @@ public class UserServiceImpl implements UserService {
 
 		String tokenResetPassword = passwordResetRequest.getAuthToken();
 
-		if (!isTokenResetPasswordExists(tokenResetPassword)) {
-			log.info("Verify code does not exist : {}", passwordResetRequest.getAuthToken());
-			throw new AuthenticationFailedException("API005_ER", "Verify code incorrect");
-
-		}
-
 		if (!jwtUtils.validateJwtToken(tokenResetPassword)) {
-			log.info("Verify code has expired : {}", passwordResetRequest.getAuthToken());
-			throw new AuthenticationFailedException("API_ER01", "Verify code has expired");
+			log.info("Verify code has expired : {}", tokenResetPassword);
+			throw new AuthenticationFailedException("API005_ER", "Verify code has expired");
 		}
 
 		User user = new User();
 		user = userRepository.findByVerifyCode(tokenResetPassword).get();
 
-		if (user.getStatus() == 0) {
-			throw new UserException("API001_ER02", "This account is not active yet");
+		if(isUsedPassword(passwordResetRequest.getNewPassword(),user)) {
+			throw new UserException("API003_ER03", "New password matches old password");
 		}
 
 		user.setPassword(encoder.encode(passwordResetRequest.getNewPassword()));
 		user.setVerifyCode(null);
+		redisTemplate.delete(RST_PWD_PREFIX + user.getEmail());
+		
 		userRepository.save(user);
 
 		log.info("{} reset password successfully!", user.getFullName());
-
-	}
-
-	private boolean isTokenResetPasswordExists(String token) {
-		return !userRepository.findByVerifyCode(token).isEmpty();
 
 	}
 
@@ -266,15 +260,27 @@ public class UserServiceImpl implements UserService {
 	public User findUserById(Integer userId) throws NotFoundException {
 		return userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found: " + userId));
 	}
+	private boolean isUsedPassword(String newPass,User user) {
+		return encoder.matches(newPass, user.getPassword());
+	}
 
 	private void restoreRegisterUser(User user) {
 		redisTemplate.opsForValue().set(user.getEmail(), null, Duration.ofMinutes(USER_CACHE_DURATION));
 		redisTemplate.opsForValue().set(user.getVerifyCode(), user, Duration.ofMinutes(USER_CACHE_DURATION));
 	}
+	
+	private void restoreResetPassWait(String email) {
+		redisTemplate.opsForValue().set(RST_PWD_PREFIX + email, null, Duration.ofMinutes(USER_CACHE_DURATION));
+	}
 
+	private boolean isSentResetPasswordMail(String email) {
+	 return	redisTemplate.hasKey(RST_PWD_PREFIX + email);
+	}
+	
 	private void clearCacheAfterActive(User user, String token) {
 		redisTemplate.delete(user.getEmail());
 		redisTemplate.delete(token);
 	}
+	
 
 }
