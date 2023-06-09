@@ -80,7 +80,7 @@ public class UserServiceImpl implements UserService {
 		}
 
 		User preActiveUser = saveNewUser(payload);
-		System.out.println(preActiveUser);
+
 		if (preActiveUser != null) {
 			restoreRegisterUser(preActiveUser);
 			emailService.sendRegistrationUserConfirm(payload.getEmail(), preActiveUser.getVerifyCode());
