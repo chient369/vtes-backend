@@ -115,7 +115,7 @@ public class UserServiceImpl implements UserService {
 		user.setCreateDt(Instant.now());
 		user.setVerifyCode(null);
 		user.setStatus((short) 1);
-		userRepository.save(user);
+		userRepository.save(user); 
 		clearCacheAfterActive(user, token);
 
 		log.info("User {} of account is active", user.getFullName());
