@@ -101,7 +101,7 @@ public class UserController {
 		return ResponseEntity.ok()
 							.body(ResponseData.builder()
 							.type(ResponseType.INFO)
-							.code("200")
+							.code("")
 							.message("Update successfull")
 							.build());
 	}

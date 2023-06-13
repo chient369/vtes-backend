@@ -7,7 +7,7 @@ public class AuthenticationFailedException extends VtesException{
 		super(code, message);
 	}
 	public AuthenticationFailedException(String email) {
-		super("AUTH_FAILED",String.format("Authenticated failed with email : %s", email));
+		super("API001_ER01",String.format("Email or password invalid with email: %s", email));
 
 	}
 	
