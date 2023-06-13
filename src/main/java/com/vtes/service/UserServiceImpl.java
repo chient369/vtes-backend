@@ -80,7 +80,6 @@ public class UserServiceImpl implements UserService {
 		}
 
 		User preActiveUser = saveNewUser(payload);
-
 		if (preActiveUser != null) {
 			restoreRegisterUser(preActiveUser);
 			emailService.sendRegistrationUserConfirm(payload.getEmail(), preActiveUser.getVerifyCode());
@@ -110,7 +109,6 @@ public class UserServiceImpl implements UserService {
 	public void activeUser(String token) throws AuthenticationFailedException {
 
 		if (!redisTemplate.hasKey(token)) {
-			log.info("Verify code has expired : {}", token);
 			throw new AuthenticationFailedException("API005_ER", "Verify code has expired");
 		}
 		User user = (User) redisTemplate.opsForValue().get(token);
@@ -166,9 +164,9 @@ public class UserServiceImpl implements UserService {
 		return departmentRepository.existsById(departmentId);
 	}
 
-	private Department getDepartmentById(Integer departmentId) {
+	private Department getDepartmentById(Integer departmentId) throws NotFoundException {
 		return departmentRepository.findById(departmentId)
-				.orElseThrow(() -> new IllegalArgumentException("Department not found"));
+				.orElseThrow(() -> new NotFoundException("Department ID"+departmentId+" not found"));
 	}
 
 	private boolean isPasswordValid(String password, String encodedPassword) {

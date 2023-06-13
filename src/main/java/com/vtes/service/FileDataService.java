@@ -72,7 +72,7 @@ public class FileDataService {
 
 	
 	public byte[] download(Integer id, Integer userId) throws NotFoundException {
-		FileData fileMeta = fileDataRepo.findById(id).orElseThrow(() -> new NotFoundException("File not found"));
+		FileData fileMeta = fileDataRepo.findByIdAndUserId(id,userId).orElseThrow(() -> new NotFoundException("","File not found"));
 		S3Object s3Object = amazonS3ServiceImpl.download(bucketName, fileMeta.getFilePath());
 		
 		log.info("Downloading an object with key= " + fileMeta.getFilePath());

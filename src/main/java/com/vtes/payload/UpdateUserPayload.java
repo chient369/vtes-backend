@@ -19,7 +19,6 @@ public class UpdateUserPayload {
 	private String fullName;
 
 	@Size(max = 64)
-	@Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\W).*$")
 	private String oldPassword;
 
 	@Size(min = 8, max = 64)

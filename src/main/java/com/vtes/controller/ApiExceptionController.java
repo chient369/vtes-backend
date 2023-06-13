@@ -62,7 +62,7 @@ public class ApiExceptionController {
 
 	@ExceptionHandler(NotFoundException.class)
 	@ResponseStatus(value = HttpStatus.NOT_FOUND)
-	public ResponseData notFoundCommuterPassValid(VtesException ex) {
+	public ResponseData notFoundCommuterPassValid(NotFoundException ex) {
 		log.debug("Error: {}",ex.getMessage());
 		return ResponseData.builder()
 				.code(ex.getCode())
@@ -139,7 +139,7 @@ public class ApiExceptionController {
 	}
 
 	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-	@ResponseStatus(value = HttpStatus.METHOD_NOT_ALLOWED)
+	@ResponseStatus(value = HttpStatus.FORBIDDEN)
 	public ResponseData methodNotAllowException(Exception ex) {
 		return ResponseData.builder()
 				.code("")
