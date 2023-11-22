@@ -4,7 +4,6 @@ metadata:
   name: vtes-app
 spec:
   replicas: 1
-  serviceName: vtes-app
   selector:
     matchLabels:
       app: vtes-app
@@ -13,20 +12,17 @@ spec:
       labels:
         app: vtes-app
     spec:
-    nodeSelector:
-      "kubernetes.io/os": linux
       containers:
       - name: vtes-app
         image: chienvti.azurecr.io/vtes/vtes-app:latest
+        imagePullPolicy: Always
         resources:
+          requests:
+            cpu: 5m
+            memory: 75Mi
           limits:
-            memory: "128Mi"
-            cpu: "500m"
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          value: AdminDef
-        - name: MYSQL_DATABASE
-          value: vtes
+            cpu: 500m
+            memory: 1024Mi
         ports:
         - containerPort: 8080
 ---
@@ -44,11 +40,12 @@ spec:
 
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: vtes-redis
 spec:
   replicas: 1
+  serviceName: vtes-redis
   selector:
     matchLabels:
       app: vtes-redis
@@ -59,23 +56,27 @@ spec:
     spec:
       nodeSelector:
         "kubernetes.io/os": linux
-      serviceName: vtes-redis
       containers:
       - name: vtes-redis
         image: redis
         resources:
+          requests:
+            cpu: 10m
+            memory: 128Mi
           limits:
-            memory: "10Mi"
-            cpu: "500m"
+            cpu: 250m
+            memory: 256Mi
         ports:
         - containerPort: 6379
         volumeMounts:
-        - name: redis-data-volume
-          mountPath: /usr/local/etc/redis/redis.conf
-          subPath: redis-config
+        - name: redis-data-config
+          mountPath: /usr/local/etc/redis
+          subPath: redis
       volumes:
-      - name: redis-data-volume
+      - name: redis-data-config
         configMap:
+          name: redis-config
+          items:
           - key: redis.conf
             path: redis-config
 ---
@@ -91,59 +92,144 @@ metadata:
   name: redis-config
 
 ---
-apiVersion: apps/v1
+apiVersion: v1
 kind: Service
 metadata:
   name: vtes-redis
-  spec:
-    selector:
-      app: vtes-redis
-    ports:
-    - name: redis
-      port: 6379
-      targetPort: 6379
-    type: ClusterIP
+spec:
+  selector:
+     app: vtes-redis
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+type: kubernetes.io/basic-auth
+stringData:
+  password: AdminDef
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vtes-mysql
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: vtes-mysql
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
         app: vtes-mysql
     spec:
-      nodeSelector:
-        "kubernetes.io/os": linux
       containers:
-      - name: vtes-mysql
-        image: mysql
-        resources:
-          limits:
-            memory: "200Mi"
-            cpu: "500m"
+      - image: mysql:8.0.33
+        name: vtes-mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
+        - name: MYSQL_DATABASE
+          value: vtes
         ports:
         - containerPort: 3306
+          name: mysql
         volumeMounts:
-        - name: mysql-data-volume
-          mountPath: /mysql-data
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
       volumes:
-
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
+    
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: vtes-mysql
 spec:
-  selector:
-    app: vtes-mysql
   ports:
   - name: mysql
     port: 3306
     targetPort: 3306
+  selector:
+    app: vtes-mysql
   type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vtes-front
+spec:
+  selector:
+    matchLabels:
+      app: vtes-front
+  template:
+    metadata:
+      labels:
+        app: vtes-front   
+    spec:
+      containers:
+      - name: vtes-front 
+        image: chienvti.azurecr.io/vtes/vtes-front:latest
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        ports:
+        - containerPort: 80
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vtes-front
+spec:
+  selector:
+    app: vtes-front
+  ports:
+  - name: vtes-front
+    port: 80
+    targetPort: 80
+  - name: vtes-app
+    port: 5173
+    targetPort: 5173
+  type: LoadBalancer
+
